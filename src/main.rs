@@ -22,7 +22,6 @@ fn main() {
             break;
         }
         let cmd = parser::parse(&line);
-        println!("{:?}", cmd);
         execute_command(cmd, &mut api, username);
     }
 }
@@ -32,17 +31,19 @@ fn execute_command(cmd: parser::Command, api: &mut Api, username: &str)
     match cmd {
         Command::Empty => {},
         Command::Simple(c) => {
-            if c[0] == "status" {
-                let obj = api.get(&("channels/".to_owned()
-                                    + &encode(username)));
-                let o = match obj {
-                    Ok(v) => v,
-                    Err(e) => { return Err(e); }
-                };
-                println!("{} playing {}\n  {}",
-                         o["display_name"], o["game"], o["status"]);
+            match c[0] {
+                "status" => {
+                    let obj = api.get(&("channels/".to_owned()
+                                        + &encode(username)));
+                    let o = match obj {
+                        Ok(v) => v,
+                        Err(e) => { return Err(e); }
+                    };
+                    println!("{} playing {}\n  {}",
+                             o["display_name"], o["game"], o["status"]);
+                },
+                _ => println!("Unknown command: {}", c[0]),
             }
-            println!("{}", c[0]);
         },
     }
     Ok(())
