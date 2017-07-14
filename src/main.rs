@@ -1,7 +1,9 @@
 extern crate urlencoding;
 
 mod api;
+mod parser;
 
+use parser::Command;
 use urlencoding::encode;
 use api::Api;
 use std::io::Write;
@@ -19,17 +21,29 @@ fn main() {
             println!();
             break;
         }
-        if line == "\n" {
-        } else if line == "status\n" {
-            let obj = api.get(&("channels/".to_owned() + &encode(username)));
-            let o = match obj {
-                Ok(v) => v,
-                Err(e) => { println!("Error: {}", e); continue; }
-            };
-            println!("{} playing {}\n  {}",
-                     o["display_name"], o["game"], o["status"]);
-        } else {
-            println!("{}", line);
-        }
+        let cmd = parser::parse(&line);
+        println!("{:?}", cmd);
+        execute_command(cmd, &mut api, username);
     }
+}
+
+fn execute_command(cmd: parser::Command, api: &mut Api, username: &str)
+                   -> Result<(), String> {
+    match cmd {
+        Command::Empty => {},
+        Command::Simple(c) => {
+            if c[0] == "status" {
+                let obj = api.get(&("channels/".to_owned()
+                                    + &encode(username)));
+                let o = match obj {
+                    Ok(v) => v,
+                    Err(e) => { return Err(e); }
+                };
+                println!("{} playing {}\n  {}",
+                         o["display_name"], o["game"], o["status"]);
+            }
+            println!("{}", c[0]);
+        },
+    }
+    Ok(())
 }
