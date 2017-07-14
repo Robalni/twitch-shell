@@ -80,6 +80,8 @@ fn execute_command(cmd: parser::Command, api: &mut Api, username: &str)
                 },
             }
         },
+        Command::Assign(lhs, rhs) => {
+        },
     }
     Ok(())
 }
