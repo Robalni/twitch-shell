@@ -26,7 +26,8 @@ fn main() {
                 Ok(v) => v,
                 Err(e) => { println!("Error: {}", e); continue; }
             };
-            println!("{}", o["status"]);
+            println!("{} playing {}\n  {}",
+                     o["display_name"], o["game"], o["status"]);
         } else {
             println!("{}", line);
         }
