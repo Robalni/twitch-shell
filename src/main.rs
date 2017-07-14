@@ -1,4 +1,8 @@
+extern crate urlencoding;
+
 mod api;
+
+use urlencoding::encode;
 use api::Api;
 use std::io::Write;
 
@@ -17,7 +21,7 @@ fn main() {
         }
         if line == "\n" {
         } else if line == "status\n" {
-            let obj = api.get(&("channels/".to_owned() + username));
+            let obj = api.get(&("channels/".to_owned() + &encode(username)));
             let o = match obj {
                 Ok(v) => v,
                 Err(e) => { println!("Error: {}", e); continue; }
