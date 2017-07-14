@@ -3,8 +3,9 @@ use api::Api;
 use std::io::Write;
 
 fn main() {
+    let username = "robalni";
     let mut line = String::new();
-    let api = Api::new();
+    let mut api = Api::new();
     loop {
         line.clear();
         print!("twitch> ");
@@ -16,7 +17,7 @@ fn main() {
         }
         if line == "\n" {
         } else if line == "status\n" {
-            
+            api.get(&("channels/".to_owned() + username));
         } else {
             println!("{}", line);
         }
