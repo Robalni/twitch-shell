@@ -42,6 +42,9 @@ fn execute_command(cmd: parser::Command, api: &mut Api, username: &str)
                     println!("{} playing {}\n  {}",
                              o["display_name"], o["game"], o["status"]);
                 },
+                "exit" => {
+                    std::process::exit(0);
+                },
                 _ => println!("Unknown command: {}", c[0]),
             }
         },
