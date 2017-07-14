@@ -1,7 +1,10 @@
+mod api;
+use api::Api;
 use std::io::Write;
 
 fn main() {
     let mut line = String::new();
+    let api = Api::new();
     loop {
         line.clear();
         print!("twitch> ");
@@ -17,15 +20,5 @@ fn main() {
         } else {
             println!("{}", line);
         }
-    }
-}
-
-struct Api {
-
-}
-
-impl Api {
-    fn get() {
-
     }
 }
