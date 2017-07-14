@@ -59,8 +59,8 @@ fn execute_command(cmd: parser::Command, api: &mut Api, username: &str)
                     while !list[i].is_null() {
                         let ref l = list[i];
                         println!("{} playing {}\n  {}",
-                                 l["channel"]["display_name"],
-                                 l["game"],
+                                 Paint::blue(&l["channel"]["display_name"]),
+                                 Paint::green(&l["game"]),
                                  l["channel"]["status"]);
                         i += 1;
                     }
