@@ -3,6 +3,7 @@ name = "twitch-shell"
 version = "0.1.0"
 dependencies = [
  "curl 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "json 0.11.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -40,6 +41,11 @@ dependencies = [
 [[package]]
 name = "gcc"
 version = "0.3.51"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "json"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -128,6 +134,7 @@ dependencies = [
 "checksum curl 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)" = "6689276ab61f97c660669a5ecc117c36875dfc1ba301c986b16c653415bdf9d7"
 "checksum curl-sys 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "d5481162dc4f424d088581db2f979fa7d4c238fe9794595de61d8d7522e277de"
 "checksum gcc 0.3.51 (registry+https://github.com/rust-lang/crates.io-index)" = "120d07f202dcc3f72859422563522b66fe6463a4c513df062874daad05f85f0a"
+"checksum json 0.11.8 (registry+https://github.com/rust-lang/crates.io-index)" = "0cb7442ee2e5698acd4db44d0746ef56785e3100d8f136fabde8b43cf482428b"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 "checksum libc 0.2.26 (registry+https://github.com/rust-lang/crates.io-index)" = "30885bcb161cf67054244d10d4a7f4835ffd58773bc72e07d35fecf472295503"
 "checksum libz-sys 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)" = "3fdd64ef8ee652185674455c1d450b83cbc8ad895625d543b5324d923f82e4d8"

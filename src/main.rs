@@ -17,7 +17,12 @@ fn main() {
         }
         if line == "\n" {
         } else if line == "status\n" {
-            api.get(&("channels/".to_owned() + username));
+            let obj = api.get(&("channels/".to_owned() + username));
+            let o = match obj {
+                Ok(v) => v,
+                Err(e) => { println!("Error: {}", e); continue; }
+            };
+            println!("{}", o["status"]);
         } else {
             println!("{}", line);
         }
