@@ -22,7 +22,10 @@ fn main() {
             break;
         }
         let cmd = parser::parse(&line);
-        execute_command(cmd, &mut api, username);
+        match execute_command(cmd, &mut api, username) {
+            Err(e) => println!("Error: {}", e),
+            Ok(_) => {},
+        }
     }
 }
 
@@ -45,7 +48,9 @@ fn execute_command(cmd: parser::Command, api: &mut Api, username: &str)
                 "exit" => {
                     std::process::exit(0);
                 },
-                _ => println!("Unknown command: {}", c[0]),
+                _ => {
+                    return Err("Unknown command: ".to_owned() + c[0]);
+                },
             }
         },
     }
