@@ -1,8 +1,10 @@
 extern crate urlencoding;
+extern crate yansi;
 
 mod api;
 mod parser;
 
+use yansi::Paint;
 use parser::Command;
 use urlencoding::encode;
 use api::Api;
@@ -14,7 +16,7 @@ fn main() {
     let mut api = Api::new();
     loop {
         line.clear();
-        print!("twitch> ");
+        print!("{} ", Paint::purple("twitch>").bold());
         std::io::stdout().flush().unwrap();
         let chars_read = std::io::stdin().read_line(&mut line).unwrap();
         if chars_read == 0 {
@@ -23,7 +25,7 @@ fn main() {
         }
         let cmd = parser::parse(&line);
         match execute_command(cmd, &mut api, username) {
-            Err(e) => println!("Error: {}", e),
+            Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
             Ok(_) => {},
         }
     }
