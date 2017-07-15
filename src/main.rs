@@ -40,6 +40,9 @@ fn execute_command(cmd: parser::Command, api: &mut Api, username: &str)
                 "exit" => {
                     std::process::exit(0);
                 },
+                "help" => {
+                    print_help();
+                },
                 "search" => {
                     let limit = 7;
                     let offset = if c.len() > 2 {
@@ -84,4 +87,12 @@ fn execute_command(cmd: parser::Command, api: &mut Api, username: &str)
         },
     }
     Ok(())
+}
+
+fn print_help() {
+    println!("Available commands:");
+    println!("  exit                  Exits the shell");
+    println!("  help                  Prints help text");
+    println!("  search <str> [page]   Searches for streams");
+    println!("  status                Prints information about your channel");
 }
