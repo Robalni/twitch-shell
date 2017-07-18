@@ -4,8 +4,6 @@
 
 * Automatically update oauth in memory when logging in
 
-* Run commands from outside shell
-
 * Don't die on utf8 error
 
 * Complain if no oauth token exists

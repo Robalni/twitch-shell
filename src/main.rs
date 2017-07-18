@@ -25,8 +25,18 @@ fn main() {
         Ok(v) => v,
         Err(e) => { println!("{}", e); String::new() },
     };
-    let mut line = String::new();
     let mut api = Api::new();
+    let mut line = String::new();
+    let args = std::env::args();
+    if args.len() > 1 {
+        line = args.collect::<Vec<String>>()[1..].join(" ");
+        let cmd = parser::parse(&line);
+        match execute_command(cmd, &mut api, username, oauth) {
+            Ok(_) => (),
+            Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
+        }
+        return;
+    }
     loop {
         line.clear();
         show_prompt(username);
