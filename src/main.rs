@@ -248,7 +248,7 @@ fn print_help() {
     p("exit", "Exits the shell");
     p("help", "Prints help text");
     p("login", "Logs in to Twitch");
-    p("s [str page]", "Alias for search or status if no arguments");
+    p("s [str [page]]", "Alias for search or status if no arguments");
     p("search <str> [page]", "Searches for streams");
     p("status", "Prints information about your channel");
     println!();
