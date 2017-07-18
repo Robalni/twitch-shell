@@ -7,3 +7,7 @@
 * Run commands from outside shell
 
 * Don't die on utf8 error
+
+* Commands:
+
+  * watch
