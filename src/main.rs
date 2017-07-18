@@ -8,7 +8,7 @@ mod parser;
 
 use rand::Rng;
 use tiny_http::{Server, Response};
-use yansi::Paint;
+use yansi::{Paint, Color};
 use parser::Command;
 use urlparse::{urlparse, GetQuery, quote};
 use api::Api;
@@ -44,7 +44,8 @@ fn main() {
 }
 
 fn show_prompt(username: &str) {
-    print!("{} ", Paint::purple(format!("{}@twitch>", username)).bold());
+    print!("{} ", Color::RGB(0x64, 0x41, 0xa5)
+           .paint(format!("{}@twitch>", username)).bold());
     std::io::stdout().flush().unwrap();
 }
 
@@ -88,7 +89,7 @@ fn execute_command(cmd: parser::Command, api: &mut Api,
                     while !list[i].is_null() {
                         let ref l = list[i];
                         println!("{} playing {}\n  {}",
-                                 Paint::blue(&l["channel"]["display_name"]),
+                                 Paint::new(&l["channel"]["display_name"]).bold(),
                                  Paint::green(&l["game"]),
                                  l["channel"]["status"]);
                         i += 1;
