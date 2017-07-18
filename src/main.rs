@@ -179,12 +179,14 @@ fn login(api: &mut Api, username: &str) -> Result<(), String> {
         return Err("Got an invalid response (the state is different)"
                    .to_owned());
     }
+    println!("Logging in...");
     let obj = api.login(&code);
     let o = match obj {
         Ok(v) => v,
         Err(e) => return Err(e),
     };
     let ref oauth = o["access_token"];
+    println!("Writing oauth token to file...");
     match string_to_file(&(format!(".{}.oauth", username)), &oauth.to_string()) {
         Err(e) => return Err(e),
         _ => (),
