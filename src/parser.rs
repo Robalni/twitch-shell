@@ -41,8 +41,8 @@ fn read_word(line: &str) -> (&str, usize) {
     }
     let length = match (&line[start..])
         .find(|c: char| {c.is_whitespace() || c == '='}) {
-        Some(v) => v,
-        None => line.len(),
-    };
+            Some(v) => v,
+            None => line[start..].len(),
+        };
     (&line[start..start+length], start+length)
 }
