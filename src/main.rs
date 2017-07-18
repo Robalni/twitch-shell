@@ -227,7 +227,8 @@ fn status(api: &mut Api, username: &str) -> Result<(), String> {
         Err(e) => return Err(e),
     };
     println!("{} playing {}\n  {}",
-             o["display_name"], o["game"], o["status"]);
+             Paint::new(&o["display_name"]).bold(),
+             Paint::green(&o["game"]), o["status"]);
     Ok(())
 }
 
