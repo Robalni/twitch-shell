@@ -79,7 +79,7 @@ fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                     status(api, username)
                 },
                 "watch"|"w" => {
-                    watch(c[1])
+                    watch(&c)
                 },
                 _ => {
                     Err("Unknown command: ".to_owned() + c[0])
@@ -199,6 +199,9 @@ fn login(api: &mut Api, username: &str) -> Result<(), String> {
 
 fn search(api: &mut Api, cmd: &Vec<&str>) -> Result<(), String> {
     let limit = 10;
+    if cmd.len() < 2 {
+        return Err("Usage: search <str> [page]".to_owned());
+    }
     let offset = if cmd.len() > 2 {
         (cmd[2].parse::<i32>().unwrap() - 1) * limit
     } else {
@@ -245,7 +248,11 @@ fn status(api: &mut Api, username: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn watch(channel: &str) -> Result<(), String> {
+fn watch(cmd: &Vec<&str>) -> Result<(), String> {
+    if cmd.len() < 2 {
+        return Err("Usage: watch <channel>".to_owned());
+    }
+    let channel = cmd[1];
     let url = format!("https://twitch.tv/{}", channel);
     let cmd = "mpv";
     match std::process::Command::new(cmd).arg(url).status() {
