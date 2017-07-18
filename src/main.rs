@@ -224,14 +224,18 @@ fn login(api: &mut Api, username: &str) -> Result<(), String> {
 }
 
 fn print_help() {
-    println!("Commands:
-  exit                  Exits the shell
-  help                  Prints help text
-  login                 Logs in to Twitch
-  search <str> [page]   Searches for streams
-  status                Prints information about your channel
-
-Variables:
-  status                Status/title of the stream
-");
+    let p = |cmd: &str, desc: &str| {
+        println!("  {:<24}{}", cmd, desc);
+    };
+    println!("Commands:");
+    p("exit", "Exits the shell");
+    p("exit", "Exits the shell");
+    p("help", "Prints help text");
+    p("login", "Logs in to Twitch");
+    p("search <str> [page]", "Searches for streams");
+    p("status", "Prints information about your channel");
+    println!();
+    println!("Variables:");
+    p("status", "Status/title of the stream");
+    println!();
 }
