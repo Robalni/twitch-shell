@@ -69,19 +69,7 @@ fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                     search(api, &c)
                 },
                 "status" => {
-                    let uname_url = match quote(username, b"") {
-                        Ok(v) => v,
-                        Err(e) => return Err(e.to_string()),
-                    };
-                    let obj = api.get(&("channels/".to_owned()
-                                        + &uname_url));
-                    let o = match obj {
-                        Ok(v) => v,
-                        Err(e) => return Err(e),
-                    };
-                    println!("{} playing {}\n  {}",
-                             o["display_name"], o["game"], o["status"]);
-                    Ok(())
+                    status(api, username)
                 },
                 _ => {
                     return Err("Unknown command: ".to_owned() + c[0]);
@@ -224,6 +212,22 @@ fn search(api: &mut Api, cmd: &Vec<&str>) -> Result<(), String> {
                  l["channel"]["status"]);
         i += 1;
     }
+    Ok(())
+}
+
+fn status(api: &mut Api, username: &str) -> Result<(), String> {
+    let uname_url = match quote(username, b"") {
+        Ok(v) => v,
+        Err(e) => return Err(e.to_string()),
+    };
+    let obj = api.get(&("channels/".to_owned()
+                        + &uname_url));
+    let o = match obj {
+        Ok(v) => v,
+        Err(e) => return Err(e),
+    };
+    println!("{} playing {}\n  {}",
+             o["display_name"], o["game"], o["status"]);
     Ok(())
 }
 
