@@ -52,7 +52,7 @@ fn show_prompt(username: &str) {
 fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                    -> Result<(), String> {
     match cmd {
-        Command::Empty => { Ok(()) },
+        Command::Empty => Ok(()),
         Command::Simple(c) => {
             match c[0] {
                 "exit" => {
@@ -79,7 +79,7 @@ fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                     status(api, username)
                 },
                 _ => {
-                    return Err("Unknown command: ".to_owned() + c[0]);
+                    Err("Unknown command: ".to_owned() + c[0])
                 },
             }
         },
@@ -95,14 +95,15 @@ fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                     let data = format!("channel[status]={}", joined_rhs);
                     let s = api.put(&path, data.as_bytes(), oauth);
                     match s {
-                        Ok(_) => {},
-                        Err(e) => return Err(e),
+                        Ok(_) => {
+                            println!("set {} to {}", lhs[0], joined_rhs);
+                            Ok(())
+                        },
+                        Err(e) => Err(e),
                     }
-                    println!("set {} to {}", lhs[0], joined_rhs);
-                    Ok(())
                 },
                 _ => {
-                    return Err("Unknown variable: ".to_owned() + lhs[0]);
+                    Err("Unknown variable: ".to_owned() + lhs[0])
                 }
             }
         },
