@@ -229,7 +229,6 @@ fn print_help() {
     };
     println!("Commands:");
     p("exit", "Exits the shell");
-    p("exit", "Exits the shell");
     p("help", "Prints help text");
     p("login", "Logs in to Twitch");
     p("search <str> [page]", "Searches for streams");
