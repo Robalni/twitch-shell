@@ -58,12 +58,19 @@ fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                 "exit" => {
                     std::process::exit(0);
                 },
-                "help" => {
+                "help"|"?" => {
                     print_help();
                     Ok(())
                 },
                 "login" => {
                     login(api, username)
+                },
+                "s" => {
+                    if c.len() == 1 {
+                        status(api, username)
+                    } else {
+                        search(api, &c)
+                    }
                 },
                 "search" => {
                     search(api, &c)
@@ -237,9 +244,11 @@ fn print_help() {
         println!("  {:<24}{}", cmd, desc);
     };
     println!("Commands:");
+    p("?", "Prints help text");
     p("exit", "Exits the shell");
     p("help", "Prints help text");
     p("login", "Logs in to Twitch");
+    p("s [str page]", "Alias for search or status if no arguments");
     p("search <str> [page]", "Searches for streams");
     p("status", "Prints information about your channel");
     println!();
