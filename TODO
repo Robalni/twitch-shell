@@ -1,0 +1,9 @@
+* Open url in browser automatically
+
+* Up arrow, tab, other useful keys
+
+* Automatically update oauth in memory when logging in
+
+* Run commands from outside shell
+
+* Don't die on utf8 error
