@@ -224,11 +224,14 @@ fn login(api: &mut Api, username: &str) -> Result<(), String> {
 }
 
 fn print_help() {
-    println!("Available commands:
+    println!("Commands:
   exit                  Exits the shell
   help                  Prints help text
   login                 Logs in to Twitch
   search <str> [page]   Searches for streams
   status                Prints information about your channel
+
+Variables:
+  status                Status/title of the stream
 ");
 }
