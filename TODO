@@ -8,6 +8,8 @@
 
 * Don't die on utf8 error
 
+* Complain if no oauth token exists
+
 * Commands:
 
   * watch
