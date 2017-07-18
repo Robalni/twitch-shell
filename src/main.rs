@@ -67,34 +67,7 @@ fn execute_command(cmd: parser::Command, api: &mut Api,
                     login(api, username)
                 },
                 "search" => {
-                    let limit = 7;
-                    let offset = if c.len() > 2 {
-                        (c[2].parse::<i32>().unwrap() - 1) * limit
-                    } else {
-                        0
-                    };
-                    let q = match quote(c[1], b"") {
-                        Ok(v) => v,
-                        Err(e) => return Err(e.to_string()),
-                    };
-                    let path = format!("search/streams?q={}&offset={}&limit={}",
-                                       q, offset, limit);
-                    let obj = api.get(&(path));
-                    let o = match obj {
-                        Ok(v) => v,
-                        Err(e) => { return Err(e); },
-                    };
-                    let mut i = 0;
-                    let ref list = o["streams"];
-                    while !list[i].is_null() {
-                        let ref l = list[i];
-                        println!("{} playing {}\n  {}",
-                                 Paint::new(&l["channel"]["display_name"]).bold(),
-                                 Paint::green(&l["game"]),
-                                 l["channel"]["status"]);
-                        i += 1;
-                    }
-                    Ok(())
+                    search(api, &c)
                 },
                 "status" => {
                     let uname_url = match quote(username, b"") {
@@ -221,6 +194,37 @@ fn login(api: &mut Api, username: &str) -> Result<(), String> {
     let r = "Everything went well. Now go back to the shell.";
     rq.respond(Response::from_string(r)).unwrap();
     println!("Done!");
+    Ok(())
+}
+
+fn search(api: &mut Api, cmd: &Vec<&str>) -> Result<(), String> {
+    let limit = 10;
+    let offset = if cmd.len() > 2 {
+        (cmd[2].parse::<i32>().unwrap() - 1) * limit
+    } else {
+        0
+    };
+    let q = match quote(cmd[1], b"") {
+        Ok(v) => v,
+        Err(e) => return Err(e.to_string()),
+    };
+    let path = format!("search/streams?q={}&offset={}&limit={}",
+                       q, offset, limit);
+    let obj = api.get(&(path));
+    let o = match obj {
+        Ok(v) => v,
+        Err(e) => return Err(e),
+    };
+    let mut i = 0;
+    let ref list = o["streams"];
+    while !list[i].is_null() {
+        let ref l = list[i];
+        println!("{} playing {}\n  {}",
+                 Paint::new(&l["channel"]["display_name"]).bold(),
+                 Paint::green(&l["game"]),
+                 l["channel"]["status"]);
+        i += 1;
+    }
     Ok(())
 }
 
