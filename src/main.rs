@@ -78,6 +78,9 @@ fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                 "status" => {
                     status(api, username)
                 },
+                "watch"|"w" => {
+                    watch(c[1])
+                },
                 _ => {
                     Err("Unknown command: ".to_owned() + c[0])
                 },
@@ -240,6 +243,15 @@ fn status(api: &mut Api, username: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn watch(channel: &str) -> Result<(), String> {
+    let url = format!("https://twitch.tv/{}", channel);
+    let cmd = "mpv";
+    match std::process::Command::new(cmd).arg(url).status() {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Could not start player {}: {}", cmd, e)),
+    }
+}
+
 fn print_help() {
     let p = |cmd: &str, desc: &str| {
         println!("  {:<24}{}", cmd, desc);
@@ -252,6 +264,8 @@ fn print_help() {
     p("s [str [page]]", "Alias for search or status if no arguments");
     p("search <str> [page]", "Searches for streams");
     p("status", "Prints information about your channel");
+    p("w <channel>", "Alias for watch");
+    p("watch <channel>", "Watch a stream (using mpv)");
     println!();
     println!("Variables:");
     p("status", "Status/title of the stream");
