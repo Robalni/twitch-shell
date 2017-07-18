@@ -49,8 +49,7 @@ fn show_prompt(username: &str) {
     std::io::stdout().flush().unwrap();
 }
 
-fn execute_command(cmd: parser::Command, api: &mut Api,
-                   username: &str, oauth: &str)
+fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                    -> Result<(), String> {
     match cmd {
         Command::Empty => { Ok(()) },
