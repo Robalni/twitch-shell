@@ -105,19 +105,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
             let joined_rhs = rhs.join(" ");
             match lhs[0] {
                 "status" => {
-                    let data = format!("channel[status]={}", joined_rhs);
-                    let path = match user.id {
-                        Some(id) => format!("channels/{}", id),
-                        None => return Err("No user".to_owned()),
-                    };
-                    let s = api.put(&path, user, data.as_bytes());
-                    match s {
-                        Ok(_) => {
-                            println!("set {} to {}", lhs[0], joined_rhs);
-                            Ok(())
-                        },
-                        Err(e) => Err(e),
-                    }
+                    set_status(api, user, joined_rhs)
                 },
                 "user" => {
                     set_user(api, user, rhs[0])
@@ -291,6 +279,23 @@ fn set_user(api: &mut Api, user: &mut User, name: &str) -> Result<(), String> {
     user.oauth = None;
     match user.update(api) {
         Ok(_) => user.save_all(),
+        Err(e) => Err(e),
+    }
+}
+
+fn set_status(api: &mut Api, user: &User, status: String)
+              -> Result<(), String> {
+    let data = format!("channel[status]={}", status);
+    let path = match user.id {
+        Some(id) => format!("channels/{}", id),
+        None => return Err("No user".to_owned()),
+    };
+    let s = api.put(&path, user, data.as_bytes());
+    match s {
+        Ok(_) => {
+            println!("set status to {}", status);
+            Ok(())
+        },
         Err(e) => Err(e),
     }
 }
