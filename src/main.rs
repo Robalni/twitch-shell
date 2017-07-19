@@ -23,28 +23,7 @@ fn main() {
         Ok(v) => Some(v),
         Err(e) => { println!("{}", e); None },
     };
-    user.id = if let Some(ref name) = user.name {
-        match string_from_file(&format!(".{}.id", name)) {
-            Ok(v) => Some(v.parse().unwrap()),
-            Err(_) => match api.get_user_id(&user) {
-                Ok(v) => Some(v),
-                Err(e) => { println!("{}", e); None },
-            },
-        }
-    } else {
-        None
-    };
-    if user.id.is_some() {
-        user.save_id().unwrap();
-    }
-    user.oauth = if let Some(ref name) = user.name {
-        match string_from_file(&format!(".{}.oauth", name)) {
-            Ok(v) => Some(v),
-            Err(_) => None,
-        }
-    } else {
-        None
-    };
+    user.update(&mut api).unwrap_or_else(|e| println!("{}", e));
     let mut line = String::new();
     let args = std::env::args();
     if args.len() > 1 {
@@ -111,6 +90,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 "status" => {
                     status(api, user)
                 },
+                "user" => {
+                    show_user(user, &c)
+                },
                 "watch"|"w" => {
                     watch(&c)
                 },
@@ -136,6 +118,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                         },
                         Err(e) => Err(e),
                     }
+                },
+                "user" => {
+                    set_user(api, user, rhs[0])
                 },
                 _ => {
                     Err("Unknown variable: ".to_owned() + lhs[0])
@@ -279,6 +264,33 @@ fn status(api: &mut Api, user: &User) -> Result<(), String> {
     Ok(())
 }
 
+fn show_user(user: &User, cmd: &Vec<&str>) -> Result<(), String> {
+    if cmd.len() == 1 {
+        let name = match user.name {
+            Some(ref v) => v,
+            None => "",
+        };
+        let id_str = match user.id {
+            Some(v) => v.to_string(),
+            None => "".to_string(),
+        };
+        println!("{} (id:{})", name, id_str);
+        Ok(())
+    } else {
+        Err("Usage: user".to_owned())
+    }
+}
+
+fn set_user(api: &mut Api, user: &mut User, name: &str) -> Result<(), String> {
+    user.name = Some(name.to_owned());
+    user.id = None;
+    user.oauth = None;
+    match user.update(api) {
+        Ok(_) => user.save_all(),
+        Err(e) => Err(e),
+    }
+}
+
 fn watch(cmd: &Vec<&str>) -> Result<(), String> {
     if cmd.len() < 2 {
         return Err("Usage: watch <channel>".to_owned());
@@ -304,11 +316,13 @@ fn print_help() {
     p("s [str [page]]", "Alias for search or status if no arguments");
     p("search <str> [page]", "Searches for streams");
     p("status", "Prints information about your channel");
+    p("user", "Prints information about current user");
     p("w <channel>", "Alias for watch");
     p("watch <channel>", "Watch a stream (using mpv)");
     println!();
     println!("Variables:");
     p("status", "Status/title of the stream");
+    p("user", "Name of current user");
     println!();
 }
 
@@ -328,9 +342,19 @@ impl User {
     }
 
     fn save_all(&self) -> Result<(), String> {
+        self.save_name()?;
         self.save_id()?;
         self.save_oauth()?;
         Ok(())
+    }
+
+    fn save_name(&self) -> Result<(), String> {
+        if let Some(ref name) = self.name {
+            string_to_file("username", &name)?;
+            Ok(())
+        } else {
+            Err("Could not save name because user has no name".to_owned())
+        }
     }
 
     fn save_id(&self) -> Result<(), String> {
@@ -357,5 +381,31 @@ impl User {
         } else {
             Err("Could not save oauth because user has no name".to_owned())
         }
+    }
+
+    fn update(&mut self, api: &mut Api) -> Result<(), String> {
+        self.id = if let Some(ref name) = self.name {
+            match string_from_file(&format!(".{}.id", name)) {
+                Ok(v) => Some(v.parse().unwrap()),
+                Err(_) => match api.get_user_id(self) {
+                    Ok(v) => Some(v),
+                    Err(e) => { println!("{}", e); None },
+                },
+            }
+        } else {
+            None
+        };
+        if self.id.is_some() {
+            self.save_id().unwrap();
+        }
+        self.oauth = if let Some(ref name) = self.name {
+            match string_from_file(&format!(".{}.oauth", name)) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }
+        } else {
+            None
+        };
+        Ok(())
     }
 }
