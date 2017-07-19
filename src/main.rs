@@ -17,21 +17,37 @@ use std::fs::File;
 use std::error::Error;
 
 fn main() {
-    let username = &match string_from_file("username") {
-        Ok(v) => v,
-        Err(e) => { println!("{}", e); return; },
-    };
-    let oauth = &match string_from_file(&(format!(".{}.oauth", username))) {
-        Ok(v) => v,
-        Err(e) => { println!("{}", e); String::new() },
-    };
+    let mut user = User::new();
     let mut api = Api::new();
+    user.name = match string_from_file("username") {
+        Ok(v) => Some(v),
+        Err(e) => { println!("{}", e); None },
+    };
+    user.id = if let Some(ref name) = user.name {
+        match string_from_file(&format!(".{}.id", name)) {
+            Ok(v) => Some(v.parse().unwrap()),
+            Err(_) => match api.get_user_id(&user) {
+                Ok(v) => Some(v),
+                Err(e) => { println!("{}", e); None },
+            },
+        }
+    } else {
+        None
+    };
+    user.oauth = if let Some(ref name) = user.name {
+        match string_from_file(&format!(".{}.oauth", name)) {
+            Ok(v) => Some(v),
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
     let mut line = String::new();
     let args = std::env::args();
     if args.len() > 1 {
         line = args.collect::<Vec<String>>()[1..].join(" ");
         let cmd = parser::parse(&line);
-        match execute_command(cmd, &mut api, username, oauth) {
+        match execute_command(cmd, &mut api, &user) {
             Ok(_) => (),
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
         }
@@ -39,27 +55,31 @@ fn main() {
     }
     loop {
         line.clear();
-        show_prompt(username);
+        show_prompt(user.name.clone());
         let chars_read = std::io::stdin().read_line(&mut line).unwrap();
         if chars_read == 0 {
             println!();
             break;
         }
         let cmd = parser::parse(&line);
-        match execute_command(cmd, &mut api, username, oauth) {
+        match execute_command(cmd, &mut api, &user) {
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
             Ok(_) => {},
         }
     }
 }
 
-fn show_prompt(username: &str) {
-    print!("{} ", Color::RGB(0x64, 0x41, 0xa5)
-           .paint(format!("{}@twitch>", username)).bold());
+fn show_prompt<T: std::fmt::Display>(username: Option<T>) {
+    let color = Color::RGB(0x64, 0x41, 0xa5);
+    if let Some(name) = username {
+        print!("{} ", color.paint(format!("{}@twitch>", name)).bold());
+    } else {
+        print!("{} ", color.paint("twitch>").bold());
+    }
     std::io::stdout().flush().unwrap();
 }
 
-fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
+fn execute_command(cmd: Command, api: &mut Api, user: &User)
                    -> Result<(), String> {
     match cmd {
         Command::Empty => Ok(()),
@@ -73,20 +93,20 @@ fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
                     Ok(())
                 },
                 "login" => {
-                    login(api, username)
+                    login(api, user)
                 },
                 "s" => {
                     if c.len() == 1 {
-                        status(api, username)
+                        status(api, user)
                     } else {
-                        search(api, &c)
+                        search(api, user, &c)
                     }
                 },
                 "search" => {
-                    search(api, &c)
+                    search(api, user, &c)
                 },
                 "status" => {
-                    status(api, username)
+                    status(api, user)
                 },
                 "watch"|"w" => {
                     watch(&c)
@@ -100,13 +120,12 @@ fn execute_command(cmd: Command, api: &mut Api, username: &str, oauth: &str)
             let joined_rhs = rhs.join(" ");
             match lhs[0] {
                 "status" => {
-                    let uname_url = match quote(username, b"") {
-                        Ok(v) => v,
-                        Err(e) => return Err(e.to_string()),
-                    };
-                    let path = format!("channels/{}", uname_url);
                     let data = format!("channel[status]={}", joined_rhs);
-                    let s = api.put(&path, data.as_bytes(), oauth);
+                    let path = match user.id {
+                        Some(id) => format!("channels/{}", id),
+                        None => return Err("No user".to_owned()),
+                    };
+                    let s = api.put(&path, user, data.as_bytes());
                     match s {
                         Ok(_) => {
                             println!("set {} to {}", lhs[0], joined_rhs);
@@ -156,7 +175,11 @@ fn string_to_file(filename: &str, string: &str) -> Result<(), String> {
     }
 }
 
-fn login(api: &mut Api, username: &str) -> Result<(), String> {
+fn login(api: &mut Api, user: &User) -> Result<(), String> {
+    let username = match user.name {
+        Some(ref v) => v,
+        None => return Err("No user".to_owned()),
+    };
     let server = Server::http("127.0.0.1:49814").unwrap();
     let mut osrng = rand::os::OsRng::new().unwrap();
     let state: String = osrng.gen_ascii_chars().take(20).collect();
@@ -197,7 +220,7 @@ fn login(api: &mut Api, username: &str) -> Result<(), String> {
     };
     let ref oauth = o["access_token"];
     println!("Writing oauth token to file...");
-    match string_to_file(&(format!(".{}.oauth", username)), &oauth.to_string()) {
+    match string_to_file(&format!(".{}.oauth", username), &oauth.to_string()) {
         Err(e) => return Err(e),
         _ => (),
     }
@@ -207,7 +230,7 @@ fn login(api: &mut Api, username: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn search(api: &mut Api, cmd: &Vec<&str>) -> Result<(), String> {
+fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     let limit = 10;
     if cmd.len() < 2 {
         return Err("Usage: search <str> [page]".to_owned());
@@ -221,9 +244,9 @@ fn search(api: &mut Api, cmd: &Vec<&str>) -> Result<(), String> {
         Ok(v) => v,
         Err(e) => return Err(e.to_string()),
     };
-    let path = format!("search/streams?q={}&offset={}&limit={}",
+    let path = format!("search/streams?query={}&offset={}&limit={}",
                        q, offset, limit);
-    let obj = api.get(&(path));
+    let obj = api.get(&path, user);
     let o = match obj {
         Ok(v) => v,
         Err(e) => return Err(e),
@@ -241,13 +264,11 @@ fn search(api: &mut Api, cmd: &Vec<&str>) -> Result<(), String> {
     Ok(())
 }
 
-fn status(api: &mut Api, username: &str) -> Result<(), String> {
-    let uname_url = match quote(username, b"") {
-        Ok(v) => v,
-        Err(e) => return Err(e.to_string()),
+fn status(api: &mut Api, user: &User) -> Result<(), String> {
+    let obj = match user.id {
+        Some(id) => api.get(&format!("channels/{}", id), user),
+        None => api.get("channel", user),
     };
-    let obj = api.get(&("channels/".to_owned()
-                        + &uname_url));
     let o = match obj {
         Ok(v) => v,
         Err(e) => return Err(e),
@@ -289,4 +310,20 @@ fn print_help() {
     println!("Variables:");
     p("status", "Status/title of the stream");
     println!();
+}
+
+pub struct User {
+    id: Option<i32>,
+    name: Option<String>,
+    oauth: Option<String>,
+}
+
+impl User {
+    fn new() -> Self {
+        User {
+            id: None,
+            name: None,
+            oauth: None,
+        }
+    }
 }
