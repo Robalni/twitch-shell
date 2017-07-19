@@ -197,8 +197,7 @@ impl Api {
                 i += 1;
             }
         } else {
-            return Err("Could not get user information from Twitch"
-                       .to_owned());
+            return Err("Could not get ids for all channels".to_owned());
         }
         Ok(ids)
     }
