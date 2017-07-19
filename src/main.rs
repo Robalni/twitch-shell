@@ -34,6 +34,9 @@ fn main() {
     } else {
         None
     };
+    if user.id.is_some() {
+        user.save_id().unwrap();
+    }
     user.oauth = if let Some(ref name) = user.name {
         match string_from_file(&format!(".{}.oauth", name)) {
             Ok(v) => Some(v),
@@ -47,7 +50,7 @@ fn main() {
     if args.len() > 1 {
         line = args.collect::<Vec<String>>()[1..].join(" ");
         let cmd = parser::parse(&line);
-        match execute_command(cmd, &mut api, &user) {
+        match execute_command(cmd, &mut api, &mut user) {
             Ok(_) => (),
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
         }
@@ -62,7 +65,7 @@ fn main() {
             break;
         }
         let cmd = parser::parse(&line);
-        match execute_command(cmd, &mut api, &user) {
+        match execute_command(cmd, &mut api, &mut user) {
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
             Ok(_) => {},
         }
@@ -79,7 +82,7 @@ fn show_prompt<T: std::fmt::Display>(username: Option<T>) {
     std::io::stdout().flush().unwrap();
 }
 
-fn execute_command(cmd: Command, api: &mut Api, user: &User)
+fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                    -> Result<(), String> {
     match cmd {
         Command::Empty => Ok(()),
@@ -93,7 +96,7 @@ fn execute_command(cmd: Command, api: &mut Api, user: &User)
                     Ok(())
                 },
                 "login" => {
-                    login(api, user)
+                    login(api, &mut user)
                 },
                 "s" => {
                     if c.len() == 1 {
@@ -175,11 +178,7 @@ fn string_to_file(filename: &str, string: &str) -> Result<(), String> {
     }
 }
 
-fn login(api: &mut Api, user: &User) -> Result<(), String> {
-    let username = match user.name {
-        Some(ref v) => v,
-        None => return Err("No user".to_owned()),
-    };
+fn login(api: &mut Api, user: &mut User) -> Result<(), String> {
     let server = Server::http("127.0.0.1:49814").unwrap();
     let mut osrng = rand::os::OsRng::new().unwrap();
     let state: String = osrng.gen_ascii_chars().take(20).collect();
@@ -220,7 +219,8 @@ fn login(api: &mut Api, user: &User) -> Result<(), String> {
     };
     let ref oauth = o["access_token"];
     println!("Writing oauth token to file...");
-    match string_to_file(&format!(".{}.oauth", username), &oauth.to_string()) {
+    user.oauth = Some(oauth.to_string());
+    match user.save_oauth() {
         Err(e) => return Err(e),
         _ => (),
     }
@@ -324,6 +324,38 @@ impl User {
             id: None,
             name: None,
             oauth: None,
+        }
+    }
+
+    fn save_all(&self) -> Result<(), String> {
+        self.save_id()?;
+        self.save_oauth()?;
+        Ok(())
+    }
+
+    fn save_id(&self) -> Result<(), String> {
+        if let Some(ref name) = self.name {
+            if let Some(ref id) = self.id {
+                string_to_file(&format!(".{}.id", name), &id.to_string())?;
+                Ok(())
+            } else {
+                Err("Could not save id because user has no id".to_owned())
+            }
+        } else {
+            Err("Could not save id because user has no name".to_owned())
+        }
+    }
+
+    fn save_oauth(&self) -> Result<(), String> {
+        if let Some(ref name) = self.name {
+            if let Some(ref oauth) = self.oauth {
+                string_to_file(&format!(".{}.oauth", name), &oauth)?;
+                Ok(())
+            } else {
+                Err("Could not save oauth because user has no oauth".to_owned())
+            }
+        } else {
+            Err("Could not save oauth because user has no name".to_owned())
         }
     }
 }
