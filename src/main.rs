@@ -195,12 +195,8 @@ fn login(api: &mut Api, user: &mut User) -> Result<(), String> {
                    .to_owned());
     }
     println!("Logging in...");
-    let obj = api.login(&code);
-    let o = match obj {
-        Ok(v) => v,
-        Err(e) => return Err(e),
-    };
-    let ref oauth = o["access_token"];
+    let obj = api.login(&code)?;
+    let ref oauth = obj["access_token"];
     println!("Writing oauth token to file...");
     user.oauth = Some(oauth.to_string());
     match user.save_oauth() {
@@ -244,13 +240,9 @@ fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     };
     let path = format!("search/streams?query={}&offset={}&limit={}",
                        q, offset, limit);
-    let obj = api.get(&path, user);
-    let o = match obj {
-        Ok(v) => v,
-        Err(e) => return Err(e),
-    };
+    let obj = api.get(&path, user)?;
     let mut i = 0;
-    let ref list = o["streams"];
+    let ref list = obj["streams"];
     while !list[i].is_null() {
         let ref l = list[i];
         println!("{} playing {}\n  {}",
