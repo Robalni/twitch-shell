@@ -71,6 +71,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 "exit" => {
                     std::process::exit(0);
                 },
+                "following"|"f" => {
+                    show_following(api, user)
+                },
                 "help"|"?" => {
                     print_help();
                     Ok(())
@@ -207,6 +210,21 @@ fn login(api: &mut Api, user: &mut User) -> Result<(), String> {
     let r = "Everything went well. Now go back to the shell.";
     rq.respond(Response::from_string(r)).unwrap();
     println!("Done!");
+    Ok(())
+}
+
+fn show_following(api: &mut Api, user: &User) -> Result<(), String> {
+    let obj = api.get("streams/followed", user)?;
+    let mut i = 0;
+    let ref list = obj["streams"];
+    while !list[i].is_null() {
+        let ref l = list[i];
+        println!("{} playing {}\n  {}",
+                 Paint::new(&l["channel"]["display_name"]).bold(),
+                 Paint::green(&l["game"]),
+                 l["channel"]["status"]);
+        i += 1;
+    }
     Ok(())
 }
 
@@ -395,6 +413,8 @@ fn print_help() {
     println!("Commands:");
     p("?", "Prints help text");
     p("exit", "Exits the shell");
+    p("f", "Alias for following");
+    p("following", "Shows online streams you follow");
     p("help", "Prints help text");
     p("login", "Logs in to Twitch");
     p("s [str [page]]", "Alias for search or status if no arguments");
