@@ -91,6 +91,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 "status" => {
                     show_status(api, user, &c)
                 },
+                "streams" => {
+                    show_streams(api, user, &c)
+                },
                 "user" => {
                     show_user(user, &c)
                 },
@@ -269,6 +272,38 @@ fn show_status(api: &mut Api, user: &User, cmd: &Vec<&str>)
     Ok(())
 }
 
+fn show_streams(api: &mut Api, user: &User, cmd: &Vec<&str>)
+                -> Result<(), String> {
+    let print_stream_info = |obj: Result<json::JsonValue, String>| {
+        let o = match obj {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+        let st = o["stream"].clone();
+        if !st.is_null() {
+            let ch = st["channel"].clone();
+            println!("{} playing {}\n  {}",
+                     Paint::new(&ch["display_name"]).bold(),
+                     Paint::green(&ch["game"]), ch["status"]);
+        }
+        Ok(())
+    };
+    if cmd.len() > 1 {
+        let names = &cmd[1..];
+        let ids = api.get_user_ids(user, names)?;
+        for id in ids {
+            print_stream_info(api.get(&format!("streams/{}", id), user));
+        }
+    } else {
+        let obj = match user.id {
+            Some(id) => api.get(&format!("streams/{}", id), user),
+            None => return Err("No user id".to_owned()),
+        };
+        print_stream_info(obj)?;
+    }
+    Ok(())
+}
+
 fn show_user(user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     if cmd.len() == 1 {
         let name = match user.name {
@@ -365,7 +400,9 @@ fn print_help() {
     p("s [str [page]]", "Alias for search or status if no arguments");
     p("search <str> [page]", "Searches for streams");
     p("status [channel...]",
-      "Prints information about channels (or your channel)");
+      "Shows info about channels (or your channel)");
+    p("streams [channel...]",
+      "Shows info about streams (or your stream) if online");
     p("user", "Prints information about current user");
     p("w <channel>", "Alias for watch");
     p("watch <channel>", "Watch a stream (using mpv)");
