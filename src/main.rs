@@ -104,6 +104,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
         Command::Assign(lhs, rhs) => {
             let joined_rhs = rhs.join(" ");
             match lhs[0] {
+                "game" => {
+                    set_game(api, user, joined_rhs)
+                },
                 "status" => {
                     set_status(api, user, joined_rhs)
                 },
@@ -286,8 +289,32 @@ fn set_user(api: &mut Api, user: &mut User, name: &str) -> Result<(), String> {
 fn set_status(api: &mut Api, user: &User, status: String)
               -> Result<(), String> {
     let data = String::new();
+    let status_url = match quote(status, b"") {
+        Ok(v) => v,
+        Err(e) => return Err(e.to_string()),
+    };
     let path = match user.id {
-        Some(id) => format!("channels/{}?channel[status]={}", id, status),
+        Some(id) => format!("channels/{}?channel[status]={}", id, status_url),
+        None => return Err("No user".to_owned()),
+    };
+    let s = api.put(&path, user, data.as_bytes());
+    match s {
+        Ok(_) => {
+            show_status(api, user)
+        },
+        Err(e) => Err(e),
+    }
+}
+
+fn set_game(api: &mut Api, user: &User, game: String)
+              -> Result<(), String> {
+    let data = String::new();
+    let game_url = match quote(game, b"") {
+        Ok(v) => v,
+        Err(e) => return Err(e.to_string()),
+    };
+    let path = match user.id {
+        Some(id) => format!("channels/{}?channel[game]={}", id, game_url),
         None => return Err("No user".to_owned()),
     };
     let s = api.put(&path, user, data.as_bytes());
@@ -329,6 +356,7 @@ fn print_help() {
     p("watch <channel>", "Watch a stream (using mpv)");
     println!();
     println!("Variables:");
+    p("game", "The game you are playing");
     p("status", "Status/title of the stream");
     p("user", "Name of current user");
     println!();
