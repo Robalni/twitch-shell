@@ -2,8 +2,4 @@
 
 * Up arrow, tab, other useful keys
 
-* Automatically update oauth in memory when logging in
-
-* Don't die on utf8 error
-
 * Complain if no oauth token exists
