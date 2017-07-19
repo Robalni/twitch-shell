@@ -5,6 +5,7 @@ use self::curl::easy::{Easy, List};
 use std::io::Read;
 use self::json::JsonValue;
 use self::rand::Rng;
+use std::error::Error;
 
 const BASE_URL: &str = "https://api.twitch.tv/kraken/";
 const CLIENT_ID: &str = "dl1xe55lg2y26u8njj769lxhq3i47r";
@@ -24,21 +25,17 @@ impl Api {
     }
 
     pub fn get(&mut self, path: &str) -> Result<JsonValue, String> {
-        self.easy.url(&(BASE_URL.to_owned() + path)).unwrap();
-        self.easy.put(false).unwrap();
-        let mut headers = List::new();
-        headers.append(&("Client-ID: ".to_owned() + CLIENT_ID)).unwrap();
-        self.easy.http_headers(headers).unwrap();
-        let mut buf = Vec::new();
-        {
-            let mut transfer = self.easy.transfer();
-            transfer.write_function(|data| {
-                buf.extend_from_slice(data);
-                Ok(data.len())
-            }).unwrap();
-            transfer.perform().unwrap();
-        }
-        let json_str = String::from_utf8(buf).unwrap();
+        let settings = EasySettings {
+            easy_handle: &mut self.easy,
+            oauth: None,
+            http_method: HttpMethod::Get,
+            url: &(BASE_URL.to_owned() + path),
+            send_buf: None,
+        };
+        let json_str = match perform_curl(settings) {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
         let obj = json::parse(&json_str);
         match obj {
             Ok(o) => {
@@ -53,28 +50,20 @@ impl Api {
         }
     }
 
-    pub fn put(&mut self, path: &str, mut data: &[u8], oauth: &str)
+    pub fn put(&mut self, path: &str, data: &[u8], oauth: &str)
                -> Result<JsonValue, String> {
-        self.easy.url(&(BASE_URL.to_owned() + path)).unwrap();
-        let mut headers = List::new();
-        headers.append(&("Client-ID: ".to_owned() + CLIENT_ID)).unwrap();
-        headers.append(&("Authorization: OAuth ".to_owned() + oauth)).unwrap();
-        self.easy.http_headers(headers).unwrap();
-        self.easy.put(true).unwrap();
         self.easy.post_field_size(data.len() as u64).unwrap();
-        let mut response = Vec::new();
-        {
-            let mut transfer = self.easy.transfer();
-            transfer.read_function(|buf| {
-                Ok(data.read(buf).unwrap_or(0))
-            }).unwrap();
-            transfer.write_function(|buf| {
-                response.extend_from_slice(buf);
-                Ok(buf.len())
-            }).unwrap();
-            transfer.perform().unwrap();
-        }
-        let json_str = String::from_utf8(response).unwrap();
+        let settings = EasySettings {
+            easy_handle: &mut self.easy,
+            oauth: Some(oauth),
+            http_method: HttpMethod::Put,
+            url: &(BASE_URL.to_owned() + path),
+            send_buf: Some(data),
+        };
+        let json_str = match perform_curl(settings) {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
         let obj = json::parse(&json_str);
         match obj {
             Ok(o) => {
@@ -89,28 +78,20 @@ impl Api {
         }
     }
 
-    pub fn post(&mut self, path: &str, mut data: &[u8], oauth: &str)
+    pub fn post(&mut self, path: &str, data: &[u8], oauth: &str)
                 -> Result<JsonValue, String> {
-        self.easy.url(&(BASE_URL.to_owned() + path)).unwrap();
-        let mut headers = List::new();
-        headers.append(&("Client-ID: ".to_owned() + CLIENT_ID)).unwrap();
-        headers.append(&("Authorization: OAuth ".to_owned() + oauth)).unwrap();
-        self.easy.http_headers(headers).unwrap();
-        self.easy.post(true).unwrap();
         self.easy.post_field_size(data.len() as u64).unwrap();
-        let mut response = Vec::new();
-        {
-            let mut transfer = self.easy.transfer();
-            transfer.read_function(|buf| {
-                Ok(data.read(buf).unwrap_or(0))
-            }).unwrap();
-            transfer.write_function(|buf| {
-                response.extend_from_slice(buf);
-                Ok(buf.len())
-            }).unwrap();
-            transfer.perform().unwrap();
-        }
-        let json_str = String::from_utf8(response).unwrap();
+        let settings = EasySettings {
+            easy_handle: &mut self.easy,
+            oauth: Some(oauth),
+            http_method: HttpMethod::Post,
+            url: &(BASE_URL.to_owned() + path),
+            send_buf: Some(data),
+        };
+        let json_str = match perform_curl(settings) {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
         let obj = json::parse(&json_str);
         match obj {
             Ok(o) => {
@@ -167,5 +148,55 @@ impl Api {
             },
             Err(e) => Err(e.to_string()),
         }
+    }
+}
+
+enum HttpMethod {
+    Get, Post, Put,
+}
+
+struct EasySettings<'a> {
+    easy_handle: &'a mut Easy,
+    oauth: Option<&'a str>,
+    http_method: HttpMethod,
+    url: &'a str,
+    send_buf: Option<&'a [u8]>,
+}
+
+fn perform_curl(mut settings: EasySettings) -> Result<String, String> {
+    let (post, put) = match settings.http_method {
+        HttpMethod::Get => (false, false),
+        HttpMethod::Post => (true, false),
+        HttpMethod::Put => (false, true),
+    };
+    settings.easy_handle.put(put).unwrap();
+    settings.easy_handle.post(post).unwrap();
+    let mut headers = List::new();
+    headers.append(&("Client-ID: ".to_owned() + CLIENT_ID)).unwrap();
+    if let Some(oauth) = settings.oauth {
+        headers.append(&("Authorization: OAuth ".to_owned() + oauth)).unwrap();
+    }
+    headers.append("Accept: application/vnd.twitchtv.v3+json").unwrap();
+    settings.easy_handle.http_headers(headers).unwrap();
+    settings.easy_handle.url(settings.url).unwrap();
+
+    let mut buf = Vec::new();
+    {
+        let mut transfer = settings.easy_handle.transfer();
+        if let Some(mut from) = settings.send_buf {
+            transfer.read_function(move |to| {
+                Ok(from.read(to).unwrap_or(0))
+            }).unwrap();
+        }
+        transfer.write_function(|from| {
+            buf.extend_from_slice(from);
+            Ok(from.len())
+        }).unwrap();
+        transfer.perform().unwrap();
+    }
+    let string = String::from_utf8(buf);
+    match string {
+        Ok(v) => Ok(v),
+        Err(e) => Err(e.description().to_owned()),
     }
 }
