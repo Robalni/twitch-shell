@@ -79,7 +79,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 },
                 "s" => {
                     if c.len() == 1 {
-                        status(api, user)
+                        show_status(api, user)
                     } else {
                         search(api, user, &c)
                     }
@@ -88,7 +88,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                     search(api, user, &c)
                 },
                 "status" => {
-                    status(api, user)
+                    show_status(api, user)
                 },
                 "user" => {
                     show_user(user, &c)
@@ -237,7 +237,7 @@ fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     Ok(())
 }
 
-fn status(api: &mut Api, user: &User) -> Result<(), String> {
+fn show_status(api: &mut Api, user: &User) -> Result<(), String> {
     let obj = match user.id {
         Some(id) => api.get(&format!("channels/{}", id), user),
         None => api.get("channel", user),
@@ -285,16 +285,15 @@ fn set_user(api: &mut Api, user: &mut User, name: &str) -> Result<(), String> {
 
 fn set_status(api: &mut Api, user: &User, status: String)
               -> Result<(), String> {
-    let data = format!("channel[status]={}", status);
+    let data = String::new();
     let path = match user.id {
-        Some(id) => format!("channels/{}", id),
+        Some(id) => format!("channels/{}?channel[status]={}", id, status),
         None => return Err("No user".to_owned()),
     };
     let s = api.put(&path, user, data.as_bytes());
     match s {
         Ok(_) => {
-            println!("set status to {}", status);
-            Ok(())
+            show_status(api, user)
         },
         Err(e) => Err(e),
     }
