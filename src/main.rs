@@ -2,6 +2,7 @@ extern crate urlparse;
 extern crate yansi;
 extern crate tiny_http;
 extern crate rand;
+extern crate json;
 
 mod api;
 mod parser;
@@ -79,7 +80,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 },
                 "s" => {
                     if c.len() == 1 {
-                        show_status(api, user)
+                        show_status(api, user, &c)
                     } else {
                         search(api, user, &c)
                     }
@@ -88,7 +89,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                     search(api, user, &c)
                 },
                 "status" => {
-                    show_status(api, user)
+                    show_status(api, user, &c)
                 },
                 "user" => {
                     show_user(user, &c)
@@ -240,18 +241,31 @@ fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     Ok(())
 }
 
-fn show_status(api: &mut Api, user: &User) -> Result<(), String> {
-    let obj = match user.id {
-        Some(id) => api.get(&format!("channels/{}", id), user),
-        None => api.get("channel", user),
+fn show_status(api: &mut Api, user: &User, cmd: &Vec<&str>)
+               -> Result<(), String> {
+    let print_channel_info = |obj: Result<json::JsonValue, String>| {
+        let o = match obj {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+        println!("{} playing {}\n  {}",
+                 Paint::new(&o["display_name"]).bold(),
+                 Paint::green(&o["game"]), o["status"]);
+        Ok(())
     };
-    let o = match obj {
-        Ok(v) => v,
-        Err(e) => return Err(e),
-    };
-    println!("{} playing {}\n  {}",
-             Paint::new(&o["display_name"]).bold(),
-             Paint::green(&o["game"]), o["status"]);
+    if cmd.len() > 1 {
+        let names = &cmd[1..];
+        let ids = api.get_user_ids(user, names)?;
+        for id in ids {
+            print_channel_info(api.get(&format!("channels/{}", id), user));
+        }
+    } else {
+        let obj = match user.id {
+            Some(id) => api.get(&format!("channels/{}", id), user),
+            None => api.get("channel", user),
+        };
+        print_channel_info(obj)?;
+    }
     Ok(())
 }
 
@@ -300,7 +314,7 @@ fn set_status(api: &mut Api, user: &User, status: String)
     let s = api.put(&path, user, data.as_bytes());
     match s {
         Ok(_) => {
-            show_status(api, user)
+            show_status(api, user, &vec!["status"])
         },
         Err(e) => Err(e),
     }
@@ -320,7 +334,7 @@ fn set_game(api: &mut Api, user: &User, game: String)
     let s = api.put(&path, user, data.as_bytes());
     match s {
         Ok(_) => {
-            show_status(api, user)
+            show_status(api, user, &vec!["status"])
         },
         Err(e) => Err(e),
     }
@@ -350,7 +364,8 @@ fn print_help() {
     p("login", "Logs in to Twitch");
     p("s [str [page]]", "Alias for search or status if no arguments");
     p("search <str> [page]", "Searches for streams");
-    p("status", "Prints information about your channel");
+    p("status [channel...]",
+      "Prints information about channels (or your channel)");
     p("user", "Prints information about current user");
     p("w <channel>", "Alias for watch");
     p("watch <channel>", "Watch a stream (using mpv)");

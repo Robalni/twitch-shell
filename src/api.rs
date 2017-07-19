@@ -152,7 +152,7 @@ impl Api {
         }
     }
 
-    pub fn get_user_id(&mut self, user: &User) -> Result<(i32), String> {
+    pub fn get_user_id(&mut self, user: &User) -> Result<i32, String> {
         let obj = match user.name {
             Some(ref name) => {
                 let res = self.get(&format!("users?login={}", name), user);
@@ -179,6 +179,28 @@ impl Api {
             Ok(v) => Ok(v),
             Err(e) => Err(e.description().to_owned()),
         }
+    }
+
+    pub fn get_user_ids(&mut self, user: &User, names: &[&str])
+                        -> Result<Vec<i32>, String> {
+        let mut ids = Vec::new();
+        let res = self.get(&format!("users?login={}", names.join(",")), user);
+        let obj = match res {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+        if obj["_total"] == names.len() {
+            let mut i = 0;
+            while i < names.len() {
+                let n = obj["users"][i]["_id"].to_string().parse();
+                ids.push(n.unwrap());
+                i += 1;
+            }
+        } else {
+            return Err("Could not get user information from Twitch"
+                       .to_owned());
+        }
+        Ok(ids)
     }
 }
 
