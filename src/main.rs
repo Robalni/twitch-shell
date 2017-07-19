@@ -274,7 +274,11 @@ fn show_user(user: &User, cmd: &Vec<&str>) -> Result<(), String> {
             Some(v) => v.to_string(),
             None => "".to_string(),
         };
-        println!("{} (id:{})", name, id_str);
+        let has_oauth = match user.oauth {
+            Some(_) => "yes",
+            None => "no",
+        };
+        println!("{} (id:{}, has_oauth:{})", name, id_str, has_oauth);
         Ok(())
     } else {
         Err("Usage: user".to_owned())
