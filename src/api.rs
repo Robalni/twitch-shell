@@ -54,7 +54,6 @@ impl Api {
 
     pub fn put(&mut self, path: &str, user: &User, data: &[u8])
                -> Result<JsonValue, String> {
-        self.easy.post_field_size(data.len() as u64).unwrap();
         let settings = EasySettings {
             easy_handle: &mut self.easy,
             oauth: &user.oauth,
@@ -82,7 +81,6 @@ impl Api {
 
     pub fn post(&mut self, path: &str, user: &User, data: &[u8])
                 -> Result<JsonValue, String> {
-        self.easy.post_field_size(data.len() as u64).unwrap();
         let settings = EasySettings {
             easy_handle: &mut self.easy,
             oauth: &user.oauth,
@@ -243,17 +241,24 @@ struct EasySettings<'a> {
 }
 
 fn perform_curl(mut settings: EasySettings) -> Result<String, String> {
-    let (post, put) = match settings.http_method {
-        HttpMethod::Get    => (false, false),
-        HttpMethod::Post   => (true,  false),
-        HttpMethod::Put    => (false, true ),
+    settings.easy_handle.reset();
+    match settings.http_method {
+        HttpMethod::Get => {
+            settings.easy_handle.get(true).unwrap();
+        },
+        HttpMethod::Post => {
+            settings.easy_handle.post_field_size(settings.send_buf
+                                                 .unwrap_or(&vec![])
+                                                 .len() as u64).unwrap();
+            settings.easy_handle.post(true).unwrap();
+        },
+        HttpMethod::Put => {
+            settings.easy_handle.put(true).unwrap();
+        },
         HttpMethod::Delete => {
             settings.easy_handle.custom_request("DELETE").unwrap();
-            (false, false)
         },
     };
-    settings.easy_handle.put(put).unwrap();
-    settings.easy_handle.post(post).unwrap();
     let mut headers = List::new();
     headers.append(&("Client-ID: ".to_owned() + CLIENT_ID)).unwrap();
     if let &Some(ref oauth) = settings.oauth {
