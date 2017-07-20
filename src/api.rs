@@ -135,46 +135,20 @@ impl Api {
 
     pub fn get_login_url(&mut self, state: &str) -> String {
         let state_url = self.easy.url_encode(state.as_bytes());
-        format!("{}oauth2/authorize?client_id={}&redirect_uri=http://localhost:49814&response_type=code&scope=channel_editor+user_follows_edit&state={}",
+        format!("{}oauth2/authorize?client_id={}&redirect_uri=http://localhost:49814&response_type=code&scope=channel_editor+user_follows_edit+channel_read&state={}",
                 BASE_URL, CLIENT_ID, state_url)
     }
 
-    pub fn login(&mut self, code: &str) -> Result<JsonValue, String> {
+    pub fn login(&mut self, user: &User, code: &str)
+                 -> Result<JsonValue, String> {
         let mut osrng = rand::os::OsRng::new().unwrap();
         let state: String = osrng.gen_ascii_chars().take(20).collect();
-        let url = format!("{}oauth2/token?client_id={}&client_secret={}&code={}\
-                           &grant_type=authorization_code\
-                           &redirect_uri={}&state={}",
-                          BASE_URL, CLIENT_ID, CLIENT_SECRET, code,
-                          REDIRECT_URI, state);
-        self.easy.url(&url).unwrap();
-        self.easy.post(true).unwrap();
-        let mut data: &[u8] = &[0];
-        let mut response = Vec::new();
-        {
-            let mut transfer = self.easy.transfer();
-            transfer.read_function(|buf| {
-                Ok(data.read(buf).unwrap_or(0))
-            }).unwrap();
-            transfer.write_function(|buf| {
-                response.extend_from_slice(buf);
-                Ok(buf.len())
-            }).unwrap();
-            transfer.perform().unwrap();
-        }
-        let json_str = String::from_utf8(response).unwrap();
-        let obj = json::parse(&json_str);
-        match obj {
-            Ok(o) => {
-                if o["error"].is_null() {
-                    Ok(o)
-                } else {
-                    Err(o["error"].to_string()
-                        + " (" + &(o["message"].to_string()) + ")")
-                }
-            },
-            Err(e) => Err(e.to_string()),
-        }
+        let path = format!("oauth2/token?client_id={}&client_secret={}&code={}\
+                            &grant_type=authorization_code\
+                            &redirect_uri={}&state={}",
+                           CLIENT_ID, CLIENT_SECRET, code,
+                           REDIRECT_URI, state);
+        self.post(&path, user, &[])
     }
 
     pub fn get_user_id(&mut self, user: &User) -> Result<i32, String> {

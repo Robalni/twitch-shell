@@ -201,14 +201,21 @@ fn login(api: &mut Api, user: &mut User) -> Result<(), String> {
                    .to_owned());
     }
     println!("Logging in...");
-    let obj = api.login(&code)?;
+    user.name = None;
+    user.id = None;
+    user.oauth = None;
+    let obj = api.login(user, &code)?;
     let ref oauth = obj["access_token"];
-    println!("Writing oauth token to file...");
-    user.oauth = Some(oauth.to_string());
-    match user.save_oauth() {
-        Err(e) => return Err(e),
-        _ => (),
+    if oauth.is_null() {
+        return Err("Could not get access token".to_owned());
     }
+    user.oauth = Some(oauth.to_string());
+    println!("Getting user information...");
+    let chobj = api.get("channel", user)?;
+    user.name = Some(chobj["name"].to_string());
+    user.id = Some(chobj["_id"].to_string().parse().unwrap());
+    println!("Saving user information...");
+    user.save_all()?;
     let r = "Everything went well. Now go back to the shell.";
     rq.respond(Response::from_string(r)).unwrap();
     println!("Done!");
