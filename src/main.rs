@@ -74,6 +74,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
         Command::Empty => Ok(()),
         Command::Simple(c) => {
             match c[0] {
+                "api" => {
+                    show_api(api, user, &c)
+                },
                 "exit" => {
                     std::process::exit(0);
                 },
@@ -228,6 +231,21 @@ fn login(api: &mut Api, user: &mut User) -> Result<(), String> {
     let r = "Everything went well. Now go back to the shell.";
     rq.respond(Response::from_string(r)).unwrap();
     println!("Done!");
+    Ok(())
+}
+
+fn show_api(api: &mut Api, user: &User, cmd: &Vec<&str>)
+              -> Result<(), String> {
+    if cmd.len() > 2 {
+        return Err("Usage: api [path]".to_owned());
+    }
+    let path = if cmd.len() == 2 {
+        cmd[1]
+    } else {
+        ""
+    };
+    let obj = api.get(path, user)?;
+    println!("{}", obj.pretty(2));
     Ok(())
 }
 
@@ -467,6 +485,7 @@ fn print_help() {
     };
     println!("Commands:");
     p("?", "Prints help text");
+    p("api [path]", "Explore the api");
     p("exit", "Exits the shell");
     p("f", "Alias for following");
     p("follow <channel...>", "Follows the channel(s)");
