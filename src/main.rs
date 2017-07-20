@@ -121,6 +121,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
             }
         },
         Command::Assign(lhs, rhs) => {
+            if lhs.len() == 0 {
+                return Err("No variable".to_owned());
+            }
             let joined_rhs = rhs.join(" ");
             match lhs[0] {
                 "game" => {
