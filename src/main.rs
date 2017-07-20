@@ -71,6 +71,12 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 "exit" => {
                     std::process::exit(0);
                 },
+                "follow" => {
+                    follow(api, user, &c)
+                },
+                "unfollow" => {
+                    unfollow(api, user, &c)
+                },
                 "following"|"f" => {
                     show_following(api, user)
                 },
@@ -207,6 +213,40 @@ fn login(api: &mut Api, user: &mut User) -> Result<(), String> {
     rq.respond(Response::from_string(r)).unwrap();
     println!("Done!");
     Ok(())
+}
+
+fn follow(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
+    if cmd.len() < 2 {
+        return Err("Usage: follow <channel...>".to_owned());
+    }
+    if let Some(my_id) = user.id {
+        let ch_ids = api.get_user_ids(user, &cmd[1..])?;
+        for ch_id in ch_ids {
+            let url = format!("users/{}/follows/channels/{}", my_id, ch_id);
+            let obj = api.put(&url, user, &[])?;
+            println!("Followed {}", obj["channel"]["display_name"]);
+        }
+        Ok(())
+    } else {
+        Err("No user id".to_owned())
+    }
+}
+
+fn unfollow(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
+    if cmd.len() < 2 {
+        return Err("Usage: unfollow <channel...>".to_owned());
+    }
+    if let Some(my_id) = user.id {
+        let ch_ids = api.get_user_ids(user, &cmd[1..])?;
+        for (i, ch_id) in ch_ids.iter().enumerate() {
+            let url = format!("users/{}/follows/channels/{}", my_id, ch_id);
+            api.delete(&url, user);
+            println!("Unollowed {}", cmd[i + 1]);
+        }
+        Ok(())
+    } else {
+        Err("No user id".to_owned())
+    }
 }
 
 fn show_following(api: &mut Api, user: &User) -> Result<(), String> {
@@ -406,6 +446,8 @@ fn print_help() {
     p("?", "Prints help text");
     p("exit", "Exits the shell");
     p("f", "Alias for following");
+    p("follow <channel...>", "Follows the channel(s)");
+    p("unfollow <channel...>", "Unfollows the channel(s)");
     p("following", "Shows online streams you follow");
     p("help", "Prints help text");
     p("login", "Logs in to Twitch");

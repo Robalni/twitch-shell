@@ -108,9 +108,36 @@ impl Api {
         }
     }
 
+    pub fn delete(&mut self, path: &str, user: &User)
+                  -> Result<JsonValue, String> {
+        let settings = EasySettings {
+            easy_handle: &mut self.easy,
+            oauth: &user.oauth,
+            http_method: HttpMethod::Delete,
+            url: &(BASE_URL.to_owned() + path),
+            send_buf: None,
+        };
+        let json_str = match perform_curl(settings) {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+        let obj = json::parse(&json_str);
+        match obj {
+            Ok(o) => {
+                if o["error"].is_null() {
+                    Ok(o)
+                } else {
+                    Err(o["error"].to_string()
+                        + " (" + &(o["message"].to_string()) + ")")
+                }
+            },
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
     pub fn get_login_url(&mut self, state: &str) -> String {
         let state_url = self.easy.url_encode(state.as_bytes());
-        format!("{}oauth2/authorize?client_id={}&redirect_uri=http://localhost:49814&response_type=code&scope=channel_editor&state={}",
+        format!("{}oauth2/authorize?client_id={}&redirect_uri=http://localhost:49814&response_type=code&scope=channel_editor+user_follows_edit&state={}",
                 BASE_URL, CLIENT_ID, state_url)
     }
 
@@ -204,7 +231,7 @@ impl Api {
 }
 
 enum HttpMethod {
-    Get, Post, Put,
+    Get, Post, Put, Delete,
 }
 
 struct EasySettings<'a> {
@@ -217,9 +244,13 @@ struct EasySettings<'a> {
 
 fn perform_curl(mut settings: EasySettings) -> Result<String, String> {
     let (post, put) = match settings.http_method {
-        HttpMethod::Get => (false, false),
-        HttpMethod::Post => (true, false),
-        HttpMethod::Put => (false, true),
+        HttpMethod::Get    => (false, false),
+        HttpMethod::Post   => (true,  false),
+        HttpMethod::Put    => (false, true ),
+        HttpMethod::Delete => {
+            settings.easy_handle.custom_request("DELETE").unwrap();
+            (false, false)
+        },
     };
     settings.easy_handle.put(put).unwrap();
     settings.easy_handle.post(post).unwrap();
