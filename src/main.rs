@@ -21,7 +21,13 @@ fn main() {
     let mut user = User::new();
     let mut api = Api::new();
     user.name = match string_from_file("username") {
-        Ok(v) => Some(v),
+        Ok(v) => {
+            if v.len() > 0 {
+                Some(v)
+            } else {
+                None
+            }
+        },
         Err(e) => None,
     };
     user.update(&mut api).unwrap_or_else(|e| println!("{}", e));
@@ -118,13 +124,13 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
             let joined_rhs = rhs.join(" ");
             match lhs[0] {
                 "game" => {
-                    set_game(api, user, joined_rhs)
+                    set_game(api, user, &joined_rhs)
                 },
                 "status" => {
-                    set_status(api, user, joined_rhs)
+                    set_status(api, user, &joined_rhs)
                 },
                 "user" => {
-                    set_user(api, user, rhs[0])
+                    set_user(api, user, &joined_rhs)
                 },
                 _ => {
                     Err("Unknown variable: ".to_owned() + lhs[0])
@@ -383,16 +389,23 @@ fn show_user(user: &User, cmd: &Vec<&str>) -> Result<(), String> {
 }
 
 fn set_user(api: &mut Api, user: &mut User, name: &str) -> Result<(), String> {
-    user.name = Some(name.to_owned());
-    user.id = None;
-    user.oauth = None;
-    match user.update(api) {
-        Ok(_) => user.save_all(),
-        Err(e) => Err(e),
+    if name.len() > 0 {
+        user.name = Some(name.to_owned());
+        user.id = None;
+        user.oauth = None;
+        match user.update(api) {
+            Ok(_) => user.save_all(),
+            Err(e) => Err(e),
+        }
+    } else {
+        user.name = None;
+        user.id = None;
+        user.oauth = None;
+        user.save_name()
     }
 }
 
-fn set_status(api: &mut Api, user: &User, status: String)
+fn set_status(api: &mut Api, user: &User, status: &str)
               -> Result<(), String> {
     let data = String::new();
     let status_url = match quote(status, b"") {
@@ -412,7 +425,7 @@ fn set_status(api: &mut Api, user: &User, status: String)
     }
 }
 
-fn set_game(api: &mut Api, user: &User, game: String)
+fn set_game(api: &mut Api, user: &User, game: &str)
               -> Result<(), String> {
     let data = String::new();
     let game_url = match quote(game, b"") {
@@ -498,12 +511,10 @@ impl User {
     }
 
     fn save_name(&self) -> Result<(), String> {
-        if let Some(ref name) = self.name {
-            string_to_file("username", &name)?;
-            Ok(())
-        } else {
-            Err("Could not save name because user has no name".to_owned())
-        }
+        string_to_file("username", match self.name {
+            Some(ref v) => v,
+            None => "",
+        })
     }
 
     fn save_id(&self) -> Result<(), String> {
