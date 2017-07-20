@@ -22,7 +22,7 @@ fn main() {
     let mut api = Api::new();
     user.name = match string_from_file("username") {
         Ok(v) => Some(v),
-        Err(e) => { println!("{}", e); None },
+        Err(e) => None,
     };
     user.update(&mut api).unwrap_or_else(|e| println!("{}", e));
     let mut line = String::new();
