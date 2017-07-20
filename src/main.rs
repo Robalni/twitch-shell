@@ -115,6 +115,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 "user" => {
                     show_user(user, &c)
                 },
+                "vods" => {
+                    show_vods(api, user, &c)
+                },
                 "watch"|"w" => {
                     watch(&c)
                 },
@@ -328,6 +331,46 @@ fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     Ok(())
 }
 
+fn show_vods(api: &mut Api, user: &User, cmd: &Vec<&str>)
+             -> Result<(), String> {
+    let limit = 10;
+    if cmd.len() > 3 {
+        return Err("Usage: vods [channel [page]]".to_owned());
+    }
+    let offset = if cmd.len() > 2 {
+        (cmd[2].parse::<i32>().unwrap() - 1) * limit
+    } else {
+        0
+    };
+    let id = if cmd.len() > 1 {
+        let channel = match quote(cmd[1], b"") {
+            Ok(v) => v,
+            Err(e) => return Err(e.to_string()),
+        };
+        api.get_user_ids(user, &[&channel])?[0]
+    } else {
+        match user.id {
+            Some(v) => v,
+            None => return Err("No user id".to_owned()),
+        }
+    };
+    let path = format!("channels/{}/videos?offset={}&limit={}",
+                       id, offset, limit);
+    let obj = api.get(&path, user)?;
+    let mut i = 0;
+    let ref list = obj["videos"];
+    while !list[i].is_null() {
+        let ref l = list[i];
+        println!("{}: {}\n  {}",
+                 Paint::cyan(&l["broadcast_type"]), &l["url"], &l["title"]);
+                 //Paint::new(&l["channel"]["display_name"]).bold(),
+                 //Paint::green(&l["game"]),
+                 //l["channel"]["status"]);
+        i += 1;
+    }
+    Ok(())
+}
+
 fn show_status(api: &mut Api, user: &User, cmd: &Vec<&str>)
                -> Result<(), String> {
     let print_channel_info = |obj: Result<json::JsonValue, String>| {
@@ -500,6 +543,7 @@ fn print_help() {
     p("streams [channel...]",
       "Shows info about streams (or your stream) if online");
     p("user", "Prints information about current user");
+    p("vods [channel [page]]", "Shows a list of videos from the channel");
     p("w <channel>", "Alias for watch");
     p("watch <channel>", "Watch a stream (using mpv)");
     println!();
