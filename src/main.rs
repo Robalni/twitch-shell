@@ -368,8 +368,9 @@ fn show_vods(api: &mut Api, user: &User, cmd: &Vec<&str>)
     let ref list = obj["videos"];
     while !list[i].is_null() {
         let ref l = list[i];
-        println!("{}: {}\n  {}",
-                 Paint::cyan(&l["broadcast_type"]), &l["url"], &l["title"]);
+        println!("{}: {} - {}\n  {}",
+                 Paint::cyan(&l["broadcast_type"]), &l["url"],
+                 &l["recorded_at"], &l["title"]);
                  //Paint::new(&l["channel"]["display_name"]).bold(),
                  //Paint::green(&l["game"]),
                  //l["channel"]["status"]);
