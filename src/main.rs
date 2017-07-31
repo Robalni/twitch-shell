@@ -268,7 +268,7 @@ fn follow(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
         for ch_id in ch_ids {
             let url = format!("users/{}/follows/channels/{}", my_id, ch_id);
             let obj = api.put(&url, user, &[])?;
-            println!("Followed {}", obj["channel"]["display_name"]);
+            println!("Followed {}", obj["channel"]["name"]);
         }
         Ok(())
     } else {
@@ -300,7 +300,7 @@ fn show_following(api: &mut Api, user: &User) -> Result<(), String> {
     while !list[i].is_null() {
         let ref l = list[i];
         println!("{} playing {}\n  {}",
-                 Paint::new(&l["channel"]["display_name"]).bold(),
+                 Paint::new(&l["channel"]["name"]).bold(),
                  Paint::green(&l["game"]),
                  l["channel"]["status"]);
         i += 1;
@@ -330,7 +330,7 @@ fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     while !list[i].is_null() {
         let ref l = list[i];
         println!("{} playing {}\n  {}",
-                 Paint::new(&l["channel"]["display_name"]).bold(),
+                 Paint::new(&l["channel"]["name"]).bold(),
                  Paint::green(&l["game"]),
                  l["channel"]["status"]);
         i += 1;
@@ -371,7 +371,7 @@ fn show_vods(api: &mut Api, user: &User, cmd: &Vec<&str>)
         println!("{}: {} - {}\n  {}",
                  Paint::cyan(&l["broadcast_type"]), &l["url"],
                  &l["recorded_at"], &l["title"]);
-                 //Paint::new(&l["channel"]["display_name"]).bold(),
+                 //Paint::new(&l["channel"]["name"]).bold(),
                  //Paint::green(&l["game"]),
                  //l["channel"]["status"]);
         i += 1;
@@ -387,7 +387,7 @@ fn show_status(api: &mut Api, user: &User, cmd: &Vec<&str>)
             Err(e) => return Err(e),
         };
         println!("{} playing {}\n  {}",
-                 Paint::new(&o["display_name"]).bold(),
+                 Paint::new(&o["name"]).bold(),
                  Paint::green(&o["game"]), o["status"]);
         Ok(())
     };
@@ -418,7 +418,7 @@ fn show_streams(api: &mut Api, user: &User, cmd: &Vec<&str>)
         if !st.is_null() {
             let ch = st["channel"].clone();
             println!("{} playing {}\n  {}",
-                     Paint::new(&ch["display_name"]).bold(),
+                     Paint::new(&ch["name"]).bold(),
                      Paint::green(&ch["game"]), ch["status"]);
         }
         Ok(())
