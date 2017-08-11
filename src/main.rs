@@ -43,9 +43,9 @@ fn main() {
         }
         return;
     }
+    let mut ed = rustyline::Editor::<()>::new();
     loop {
         line.clear();
-        let mut ed = rustyline::Editor::<()>::new();
         use rustyline::error::ReadlineError::*;
         line = match ed.readline(&get_prompt(user.name.clone())) {
             Ok(l) => l,
