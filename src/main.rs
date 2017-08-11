@@ -49,10 +49,13 @@ fn main() {
         use rustyline::error::ReadlineError::*;
         match ed.readline(&get_prompt(user.name.clone())) {
             Ok(l) => line = l,
-            Err(e) => match e {
-                Eof => break,
-                Interrupted => println!("Interrupted"),
-                _ => println!("{}", Paint::red(format!("Error: {}", e))),
+            Err(e) =>  {
+                match e {
+                    Eof => break,
+                    Interrupted => println!("Interrupted"),
+                    _ => println!("{}", Paint::red(format!("Error: {}", e))),
+                };
+                continue;
             },
         }
         let cmd = parser::parse(&line);
