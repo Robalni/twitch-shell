@@ -47,9 +47,9 @@ fn main() {
         line.clear();
         let mut ed = rustyline::Editor::<()>::new();
         use rustyline::error::ReadlineError::*;
-        match ed.readline(&get_prompt(user.name.clone())) {
-            Ok(l) => line = l,
-            Err(e) =>  {
+        line = match ed.readline(&get_prompt(user.name.clone())) {
+            Ok(l) => l,
+            Err(e) => {
                 match e {
                     Eof => break,
                     Interrupted => println!("Interrupted"),
@@ -57,7 +57,8 @@ fn main() {
                 };
                 continue;
             },
-        }
+        };
+        ed.add_history_entry(&line);
         let cmd = parser::parse(&line);
         match execute_command(cmd, &mut api, &mut user) {
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
