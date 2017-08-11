@@ -3,6 +3,7 @@ extern crate yansi;
 extern crate tiny_http;
 extern crate rand;
 extern crate json;
+extern crate rustyline;
 
 mod api;
 mod parser;
@@ -44,11 +45,15 @@ fn main() {
     }
     loop {
         line.clear();
-        show_prompt(user.name.clone());
-        let chars_read = std::io::stdin().read_line(&mut line).unwrap();
-        if chars_read == 0 {
-            println!();
-            break;
+        let mut ed = rustyline::Editor::<()>::new();
+        use rustyline::error::ReadlineError::*;
+        match ed.readline(&get_prompt(user.name.clone())) {
+            Ok(l) => line = l,
+            Err(e) => match e {
+                Eof => break,
+                Interrupted => println!("Interrupted"),
+                _ => println!("{}", Paint::red(format!("Error: {}", e))),
+            },
         }
         let cmd = parser::parse(&line);
         match execute_command(cmd, &mut api, &mut user) {
@@ -58,14 +63,13 @@ fn main() {
     }
 }
 
-fn show_prompt<T: std::fmt::Display>(username: Option<T>) {
+fn get_prompt<T: std::fmt::Display>(username: Option<T>) -> String {
     let color = Color::RGB(0x64, 0x41, 0xa5);
     if let Some(name) = username {
-        print!("{} ", color.paint(format!("{}@twitch>", name)).bold());
+        format!("{} ", color.paint(format!("{}@twitch>", name)).bold())
     } else {
-        print!("{} ", color.paint("twitch>").bold());
+        format!("{} ", color.paint("twitch>").bold())
     }
-    std::io::stdout().flush().unwrap();
 }
 
 fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
