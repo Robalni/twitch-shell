@@ -4,6 +4,7 @@ extern crate tiny_http;
 extern crate rand;
 extern crate json;
 extern crate rustyline;
+extern crate chrono;
 
 mod api;
 mod parser;
@@ -123,6 +124,9 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 },
                 "streams" => {
                     show_streams(api, user, &c)
+                },
+                "time" => {
+                    show_time(api, user, &c)
                 },
                 "unfollow" => {
                     unfollow(api, user, &c)
@@ -447,6 +451,43 @@ fn show_streams(api: &mut Api, user: &User, cmd: &Vec<&str>)
     Ok(())
 }
 
+fn show_time(api: &mut Api, user: &User, cmd: &Vec<&str>)
+             -> Result<(), String> {
+    let print_stream_info = |obj: Result<json::JsonValue, String>| {
+        let o = match obj {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+        let st = o["stream"].clone();
+        let started = match st["created_at"].as_str() {
+            Some(v) => v,
+            None => return Err("Stream not found".to_owned()),
+        };
+        let dur = match chrono::DateTime::parse_from_rfc3339(started) {
+            Ok(v) => {
+                chrono::Local::now().signed_duration_since(v)
+            },
+            Err(e) => return Err(format!("Could not parse date: {}", e)),
+        };
+        println!("{}", dur_to_str(&dur));
+        Ok(())
+    };
+    if cmd.len() > 1 {
+        let names = &cmd[1..];
+        let ids = api.get_user_ids(user, names)?;
+        for id in ids {
+            print_stream_info(api.get(&format!("streams/{}", id), user))?;
+        }
+    } else {
+        let obj = match user.id {
+            Some(id) => api.get(&format!("streams/{}", id), user),
+            None => return Err("No user id".to_owned()),
+        };
+        print_stream_info(obj)?;
+    }
+    Ok(())
+}
+
 fn show_user(user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     if cmd.len() == 1 {
         let name = match user.name {
@@ -558,6 +599,8 @@ fn print_help() {
       "Shows info about channels (or your channel)");
     p("streams [channel...]",
       "Shows info about streams (or your stream) if online");
+    p("time [channel...]",
+      "Shows for how long the channels have been streaming");
     p("user", "Prints information about current user");
     p("vods [channel [page]]", "Shows a list of videos from the channel");
     p("w <channel>", "Alias for watch");
@@ -650,6 +693,13 @@ impl User {
         };
         Ok(())
     }
+}
+
+fn dur_to_str(dur: &chrono::Duration) -> String {
+    let h = dur.num_hours();
+    let m = dur.num_minutes() - h*60;
+    let s = dur.num_seconds() - dur.num_minutes()*60;
+    format!("{}:{:02}:{:02}", h, m, s)
 }
 
 fn print_some_shit() {
