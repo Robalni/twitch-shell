@@ -326,7 +326,10 @@ fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
         return Err("Usage: search <str> [page]".to_owned());
     }
     let offset = if cmd.len() > 2 {
-        (cmd[2].parse::<i32>().unwrap() - 1) * limit
+        match cmd[2].parse::<i32>() {
+            Ok(v) => (v - 1) * limit,
+            Err(e) => return Err("Page must be a number".to_owned()),
+        }
     } else {
         0
     };
