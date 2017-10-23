@@ -39,3 +39,32 @@ robalni@twitch> status = Programming a Twitch shell
 Robalni playing Creative
   Programming a Twitch shell
 ```
+
+## Commands and variables
+
+| Command               | Description
+| --------------------- | ------------
+| ?                     | Prints help text
+| api [path]            | Explore the api
+| exit                  | Exits the shell
+| f                     | Alias for following
+| follow <channel...>   | Follows the channel(s)
+| unfollow <channel...> | Unfollows the channel(s)
+| following             | Shows online streams you follow
+| help                  | Prints help text
+| login                 | Logs in to Twitch
+| s [str [page]]        | Alias for search or status if no arguments
+| search <str> [page]   | Searches for streams
+| status [channel...]   | Shows info about channels (or your channel)
+| streams [channel...]  | Shows info about streams (or your stream) if online
+| time [channel...]     | Shows for how long the channels have been streaming
+| user                  | Prints information about current user
+| vods [channel [page]] | Shows a list of videos from the channel
+| w <channel>           | Alias for watch
+| watch <channel>       | Watch a stream (using mpv)
+
+| Variable              | Description
+|-----------------------|-------------
+| game                  | The game you are playing
+| status                | Status/title of the stream
+| user                  | Name of current user
