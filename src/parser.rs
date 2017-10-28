@@ -1,6 +1,6 @@
 #[derive(Debug)]
-pub enum Command<'a> {
-    Empty, Simple(Vec<&'a str>), Assign(Vec<&'a str>, Vec<&'a str>)
+pub enum Command {
+    Empty, Simple(Vec<String>), Assign(Vec<String>, Vec<String>)
 }
 
 pub fn parse(line: &str) -> Command {
@@ -31,18 +31,34 @@ pub fn parse(line: &str) -> Command {
     }
 }
 
-fn read_word(line: &str) -> (&str, usize) {
+fn read_word(line: &str) -> (String, usize) {
+    let mut word = String::new();
     let start = match line.find(|c: char| !c.is_whitespace()) {
         Some(v) => v,
-        None => return ("", line.len()),
+        None => return ("".to_owned(), line.len()),
     };
     if (&line[start..]).starts_with("=") {
-        return ("=", start+1);
+        return ("=".to_owned(), start+1);
     }
-    let length = match (&line[start..])
-        .find(|c: char| {c.is_whitespace() || c == '='}) {
-            Some(v) => v,
-            None => line[start..].len(),
-        };
-    (&line[start..start+length], start+length)
+    let mut length = 0;
+    let mut quoted: Option<char> = None;
+    for c in line[start..].chars() {
+        if let Some(q) = quoted {
+            if q == c {
+                quoted = None;
+                length += 1;
+                continue;
+            }
+        } else if c == '\'' || c == '"' {
+            quoted = Some(c);
+            length += 1;
+            continue;
+        }
+        if quoted.is_none() && (c.is_whitespace() || c == '=') {
+            break;
+        }
+        word.push(c);
+        length += 1;
+    }
+    (word, start + length)
 }

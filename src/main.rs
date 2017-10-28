@@ -18,6 +18,7 @@ use api::Api;
 use std::io::{Write, Read};
 use std::fs::File;
 use std::error::Error;
+use std::borrow::Borrow;
 
 fn main() {
     let mut user = User::new();
@@ -82,7 +83,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
     match cmd {
         Command::Empty => Ok(()),
         Command::Simple(c) => {
-            match c[0] {
+            match c[0].borrow() {
                 "api" => {
                     show_api(api, user, &c)
                 },
@@ -141,7 +142,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                     watch(&c)
                 },
                 _ => {
-                    Err("Unknown command: ".to_owned() + c[0])
+                    Err("Unknown command: ".to_owned() + &c[0])
                 },
             }
         },
@@ -150,7 +151,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                 return Err("No variable".to_owned());
             }
             let joined_rhs = rhs.join(" ");
-            match lhs[0] {
+            match lhs[0].borrow() {
                 "game" => {
                     set_game(api, user, &joined_rhs)
                 },
@@ -161,7 +162,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                     set_user(api, user, &joined_rhs)
                 },
                 _ => {
-                    Err("Unknown variable: ".to_owned() + lhs[0])
+                    Err("Unknown variable: ".to_owned() + &lhs[0])
                 }
             }
         },
@@ -256,13 +257,13 @@ fn login(api: &mut Api, user: &mut User) -> Result<(), String> {
     Ok(())
 }
 
-fn show_api(api: &mut Api, user: &User, cmd: &Vec<&str>)
+fn show_api<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
               -> Result<(), String> {
     if cmd.len() > 2 {
         return Err("Usage: api [path]".to_owned());
     }
     let path = if cmd.len() == 2 {
-        cmd[1]
+        cmd[1].borrow()
     } else {
         ""
     };
@@ -271,7 +272,8 @@ fn show_api(api: &mut Api, user: &User, cmd: &Vec<&str>)
     Ok(())
 }
 
-fn follow(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
+fn follow<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
+                         -> Result<(), String> {
     if cmd.len() < 2 {
         return Err("Usage: follow <channel...>".to_owned());
     }
@@ -288,7 +290,7 @@ fn follow(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     }
 }
 
-fn unfollow(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
+fn unfollow<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>) -> Result<(), String> {
     if cmd.len() < 2 {
         return Err("Usage: unfollow <channel...>".to_owned());
     }
@@ -297,7 +299,7 @@ fn unfollow(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
         for (i, ch_id) in ch_ids.iter().enumerate() {
             let url = format!("users/{}/follows/channels/{}", my_id, ch_id);
             api.delete(&url, user);
-            println!("Unollowed {}", cmd[i + 1]);
+            println!("Unollowed {}", cmd[i + 1].borrow());
         }
         Ok(())
     } else {
@@ -320,20 +322,20 @@ fn show_following(api: &mut Api, user: &User) -> Result<(), String> {
     Ok(())
 }
 
-fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
+fn search<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>) -> Result<(), String> {
     let limit = 10;
     if cmd.len() < 2 {
         return Err("Usage: search <str> [page]".to_owned());
     }
     let offset = if cmd.len() > 2 {
-        match cmd[2].parse::<i32>() {
+        match cmd[2].borrow().parse::<i32>() {
             Ok(v) => (v - 1) * limit,
             Err(e) => return Err("Page must be a number".to_owned()),
         }
     } else {
         0
     };
-    let q = match quote(cmd[1], b"") {
+    let q = match quote(cmd[1].borrow(), b"") {
         Ok(v) => v,
         Err(e) => return Err(e.to_string()),
     };
@@ -353,23 +355,23 @@ fn search(api: &mut Api, user: &User, cmd: &Vec<&str>) -> Result<(), String> {
     Ok(())
 }
 
-fn show_vods(api: &mut Api, user: &User, cmd: &Vec<&str>)
+fn show_vods<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
              -> Result<(), String> {
     let limit = 10;
     if cmd.len() > 3 {
         return Err("Usage: vods [channel [page]]".to_owned());
     }
     let offset = if cmd.len() > 2 {
-        (cmd[2].parse::<i32>().unwrap() - 1) * limit
+        (cmd[2].borrow().parse::<i32>().unwrap() - 1) * limit
     } else {
         0
     };
     let id = if cmd.len() > 1 {
-        let channel = match quote(cmd[1], b"") {
+        let channel = match quote(cmd[1].borrow(), b"") {
             Ok(v) => v,
             Err(e) => return Err(e.to_string()),
         };
-        api.get_user_ids(user, &[&channel])?[0]
+        api.get_user_ids(user, &[channel])?[0]
     } else {
         match user.id {
             Some(v) => v,
@@ -394,7 +396,7 @@ fn show_vods(api: &mut Api, user: &User, cmd: &Vec<&str>)
     Ok(())
 }
 
-fn show_status(api: &mut Api, user: &User, cmd: &Vec<&str>)
+fn show_status<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
                -> Result<(), String> {
     let print_channel_info = |obj: Result<json::JsonValue, String>| {
         let o = match obj {
@@ -422,7 +424,7 @@ fn show_status(api: &mut Api, user: &User, cmd: &Vec<&str>)
     Ok(())
 }
 
-fn show_streams(api: &mut Api, user: &User, cmd: &Vec<&str>)
+fn show_streams<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
                 -> Result<(), String> {
     let print_stream_info = |obj: Result<json::JsonValue, String>| {
         let o = match obj {
@@ -454,7 +456,7 @@ fn show_streams(api: &mut Api, user: &User, cmd: &Vec<&str>)
     Ok(())
 }
 
-fn show_time(api: &mut Api, user: &User, cmd: &Vec<&str>)
+fn show_time<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
              -> Result<(), String> {
     let print_stream_info = |obj: Result<json::JsonValue, String>| {
         let o = match obj {
@@ -491,7 +493,7 @@ fn show_time(api: &mut Api, user: &User, cmd: &Vec<&str>)
     Ok(())
 }
 
-fn show_user(user: &User, cmd: &Vec<&str>) -> Result<(), String> {
+fn show_user<S: Borrow<str>>(user: &User, cmd: &Vec<S>) -> Result<(), String> {
     if cmd.len() == 1 {
         let name = match user.name {
             Some(ref v) => v,
@@ -569,12 +571,12 @@ fn set_game(api: &mut Api, user: &User, game: &str)
     }
 }
 
-fn watch(cmd: &Vec<&str>) -> Result<(), String> {
+fn watch<S: Borrow<str>>(cmd: &Vec<S>) -> Result<(), String> {
     if cmd.len() < 2 {
         return Err("Usage: watch <channel>".to_owned());
     }
-    let channel = cmd[1];
-    let url = format!("https://twitch.tv/{}", channel);
+    let channel = &cmd[1];
+    let url = format!("https://twitch.tv/{}", channel.borrow());
     let cmd = "mpv";
     match std::process::Command::new(cmd).arg(url).status() {
         Ok(_) => Ok(()),

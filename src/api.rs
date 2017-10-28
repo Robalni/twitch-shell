@@ -7,6 +7,7 @@ use self::json::JsonValue;
 use self::rand::Rng;
 use std::error::Error;
 use ::User;
+use std::borrow::Borrow;
 
 const BASE_URL: &str = "https://api.twitch.tv/kraken/";
 const CLIENT_ID: &str = "dl1xe55lg2y26u8njj769lxhq3i47r";
@@ -25,13 +26,13 @@ impl Api {
         }
     }
 
-    pub fn get(&mut self, path: &str, user: &User)
+    pub fn get<S: AsRef<str>>(&mut self, path: S, user: &User)
                -> Result<JsonValue, String> {
         let settings = EasySettings {
             easy_handle: &mut self.easy,
             oauth: &user.oauth,
             http_method: HttpMethod::Get,
-            url: &(BASE_URL.to_owned() + path),
+            url: &(BASE_URL.to_owned() + path.as_ref()),
             send_buf: None,
         };
         let json_str = match perform_curl(settings) {
@@ -180,7 +181,7 @@ impl Api {
         }
     }
 
-    pub fn get_user_ids(&mut self, user: &User, names: &[&str])
+    pub fn get_user_ids<S: Borrow<str>>(&mut self, user: &User, names: &[S])
                         -> Result<Vec<i32>, String> {
         let mut ids = Vec::new();
         let res = self.get(&format!("users?login={}", names.join(",")), user);
