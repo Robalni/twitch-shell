@@ -255,7 +255,10 @@ fn perform_curl(mut settings: EasySettings) -> Result<String, String> {
             buf.extend_from_slice(from);
             Ok(from.len())
         }).unwrap();
-        transfer.perform().unwrap();
+        match transfer.perform() {
+            Ok(_) => (),
+            Err(e) => return Err(e.description().to_owned()),
+        };
     }
     let string = String::from_utf8(buf);
     match string {
