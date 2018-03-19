@@ -21,6 +21,7 @@ use std::fs::File;
 use std::error::Error;
 use std::borrow::Borrow;
 use completion::Completer;
+use completion::LastSeenList;
 
 fn main() {
     let mut user = User::new();
@@ -85,7 +86,7 @@ fn get_prompt<T: std::fmt::Display>(username: Option<T>) -> String {
 }
 
 fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User,
-                   namelist: &mut Vec<String>)
+                   namelist: &mut LastSeenList<String>)
                    -> Result<(), String> {
     match cmd {
         Command::Empty => Ok(()),
@@ -297,7 +298,8 @@ fn follow<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
     }
 }
 
-fn unfollow<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>) -> Result<(), String> {
+fn unfollow<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
+        -> Result<(), String> {
     if cmd.len() < 2 {
         return Err("Usage: unfollow <channel...>".to_owned());
     }
@@ -314,8 +316,9 @@ fn unfollow<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>) -> Result<
     }
 }
 
-fn show_following(api: &mut Api, user: &User, namelist: &mut Vec<String>)
-                  -> Result<(), String> {
+fn show_following(api: &mut Api, user: &User,
+                  namelist: &mut LastSeenList<String>)
+            -> Result<(), String> {
     let obj = api.get("streams/followed", user)?;
     let mut i = 0;
     let ref list = obj["streams"];
@@ -332,7 +335,8 @@ fn show_following(api: &mut Api, user: &User, namelist: &mut Vec<String>)
 }
 
 fn search<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>,
-                          namelist: &mut Vec<String>) -> Result<(), String> {
+                          namelist: &mut LastSeenList<String>)
+        -> Result<(), String> {
     let limit = 10;
     if cmd.len() < 2 {
         return Err("Usage: search <str> [page]".to_owned());
