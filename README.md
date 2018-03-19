@@ -18,6 +18,8 @@ The license is CC0. You find the license text in the file LICENSE.
 
 * Search, follow, unfollow, watch streams and more
 
+* Tab completion for names you have seen.
+
 ## Example usage
 
 ```
