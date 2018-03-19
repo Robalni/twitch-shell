@@ -8,6 +8,7 @@ extern crate chrono;
 
 mod api;
 mod parser;
+mod completion;
 
 use rand::Rng;
 use tiny_http::{Server, Response};
@@ -19,6 +20,7 @@ use std::io::{Write, Read};
 use std::fs::File;
 use std::error::Error;
 use std::borrow::Borrow;
+use completion::Completer;
 
 fn main() {
     let mut user = User::new();
@@ -36,16 +38,19 @@ fn main() {
     user.update(&mut api).unwrap_or_else(|e| println!("{}", e));
     let mut line = String::new();
     let args = std::env::args();
+    let completer: Completer = Completer::new();
+    let mut ed = rustyline::Editor::<(Completer)>::new();
+    ed.set_completer(Some(completer));
     if args.len() > 1 {
         line = args.collect::<Vec<String>>()[1..].join(" ");
         let cmd = parser::parse(&line);
-        match execute_command(cmd, &mut api, &mut user) {
+        match execute_command(cmd, &mut api, &mut user,
+                              &mut ed.get_completer().unwrap().names) {
             Ok(_) => (),
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
         }
         return;
     }
-    let mut ed = rustyline::Editor::<()>::new();
     loop {
         line.clear();
         use rustyline::error::ReadlineError::*;
@@ -60,9 +65,10 @@ fn main() {
                 continue;
             },
         };
-        ed.add_history_entry(&line);
+        ed.add_history_entry(line.as_ref());
         let cmd = parser::parse(&line);
-        match execute_command(cmd, &mut api, &mut user) {
+        match execute_command(cmd, &mut api, &mut user,
+                              &mut ed.get_completer().unwrap().names) {
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
             Ok(_) => {},
         }
@@ -78,7 +84,8 @@ fn get_prompt<T: std::fmt::Display>(username: Option<T>) -> String {
     }
 }
 
-fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
+fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User,
+                   namelist: &mut Vec<String>)
                    -> Result<(), String> {
     match cmd {
         Command::Empty => Ok(()),
@@ -98,7 +105,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                     Ok(())
                 },
                 "following"|"f" => {
-                    show_following(api, user)
+                    show_following(api, user, namelist)
                 },
                 "help"|"?" => {
                     print_help();
@@ -114,11 +121,11 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User)
                     if c.len() == 1 {
                         show_status(api, user, &c)
                     } else {
-                        search(api, user, &c)
+                        search(api, user, &c, namelist)
                     }
                 },
                 "search" => {
-                    search(api, user, &c)
+                    search(api, user, &c, namelist)
                 },
                 "status" => {
                     show_status(api, user, &c)
@@ -307,7 +314,8 @@ fn unfollow<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>) -> Result<
     }
 }
 
-fn show_following(api: &mut Api, user: &User) -> Result<(), String> {
+fn show_following(api: &mut Api, user: &User, namelist: &mut Vec<String>)
+                  -> Result<(), String> {
     let obj = api.get("streams/followed", user)?;
     let mut i = 0;
     let ref list = obj["streams"];
@@ -317,12 +325,14 @@ fn show_following(api: &mut Api, user: &User) -> Result<(), String> {
                  Paint::new(&l["channel"]["name"]).bold(),
                  Paint::green(&l["game"]),
                  l["channel"]["status"]);
+        namelist.push(l["channel"]["name"].to_string());
         i += 1;
     }
     Ok(())
 }
 
-fn search<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>) -> Result<(), String> {
+fn search<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>,
+                          namelist: &mut Vec<String>) -> Result<(), String> {
     let limit = 10;
     if cmd.len() < 2 {
         return Err("Usage: search <str> [page]".to_owned());
@@ -350,6 +360,7 @@ fn search<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>) -> Result<()
                  Paint::new(&l["channel"]["name"]).bold(),
                  Paint::green(&l["game"]),
                  l["channel"]["status"]);
+        namelist.push(l["channel"]["name"].to_string());
         i += 1;
     }
     Ok(())

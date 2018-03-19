@@ -4,11 +4,11 @@ version = "0.1.0"
 authors = ["Robert Alm Nilsson <rorialni@gmail.com>"]
 
 [dependencies]
-curl = "0.4.7"
-json = "0.11.8"
-urlparse = "0.7.3"
-yansi = "0.3.0"
-tiny_http = "0.5.8"
-rand = "0.3.15"
-rustyline = "1.0.0"
-chrono = "0.4.0"
+curl = "^0.4"
+json = "^0.11"
+urlparse = "^0.7"
+yansi = "^0.3"
+tiny_http = "^0.5"
+rand = "^0.3"
+rustyline = { git = "https://github.com/robalni/rustyline" }
+chrono = "^0.4"
