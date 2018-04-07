@@ -24,6 +24,7 @@ use std::borrow::Borrow;
 use completion::Completer;
 use completion::LastSeenList;
 use json::JsonValue;
+use rustyline::Editor;
 
 fn main() {
     let mut user = User::new();
@@ -42,13 +43,12 @@ fn main() {
     let mut line = String::new();
     let args = std::env::args();
     let completer: Completer = Completer::new();
-    let mut ed = rustyline::Editor::<(Completer)>::new();
+    let mut ed = Editor::<(Completer)>::new();
     ed.set_completer(Some(completer));
     if args.len() > 1 {
         line = args.collect::<Vec<String>>()[1..].join(" ");
         let cmd = parser::parse(&line);
-        match execute_command(cmd, &mut api, &mut user,
-                              &mut ed.get_completer().unwrap().names) {
+        match execute_command(cmd, &mut api, &mut user, &mut ed) {
             Ok(_) => (),
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
         }
@@ -70,8 +70,7 @@ fn main() {
         };
         ed.add_history_entry(line.as_ref());
         let cmd = parser::parse(&line);
-        match execute_command(cmd, &mut api, &mut user,
-                              &mut ed.get_completer().unwrap().names) {
+        match execute_command(cmd, &mut api, &mut user, &mut ed) {
             Err(e) => println!("{}", Paint::red(format!("Error: {}", e))),
             Ok(_) => {},
         }
@@ -87,15 +86,25 @@ fn get_prompt<T: std::fmt::Display>(username: Option<T>) -> String {
     }
 }
 
-fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User,
-                   namelist: &mut LastSeenList<String>)
-                   -> Result<(), MyError> {
+fn execute_command(cmd: Command,
+                   api: &mut Api,
+                   mut user: &mut User,
+                   editor: &mut Editor<Completer>)
+        -> Result<(), MyError> {
+    macro_rules! namelist {
+        ($ed:expr) => {
+            &mut $ed.get_completer().unwrap().names
+        }
+    }
     match cmd {
         Command::Empty => Ok(()),
         Command::Simple(c) => {
             match c[0].borrow() {
                 "api" => {
                     show_api(api, user, &c)
+                },
+                "edit" => {
+                    edit_var(api, user, &c, editor)
                 },
                 "exit" => {
                     std::process::exit(0);
@@ -108,7 +117,7 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User,
                     Ok(())
                 },
                 "following"|"f" => {
-                    show_following(api, user, namelist)
+                    show_following(api, user, namelist!(editor))
                 },
                 "help"|"?" => {
                     print_help();
@@ -124,11 +133,11 @@ fn execute_command(cmd: Command, api: &mut Api, mut user: &mut User,
                     if c.len() == 1 {
                         show_status(api, user, &c)
                     } else {
-                        search(api, user, &c, namelist)
+                        search(api, user, &c, namelist!(editor))
                     }
                 },
                 "search" => {
-                    search(api, user, &c, namelist)
+                    search(api, user, &c, namelist!(editor))
                 },
                 "status" => {
                     show_status(api, user, &c)
@@ -257,6 +266,41 @@ fn show_api<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
     println!("{}", obj.pretty(2));
     Ok(())
 }
+
+fn edit_var<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>,
+                            editor: &mut Editor<Completer>)
+                           -> Result<(), MyError> {
+    if cmd.len() != 2 {
+        return Err(MyError::from("Usage: edit <var>"));
+    }
+    let var = cmd[1].borrow();
+    let prompt = &Paint::yellow(format!("{}: ", var)).bold().to_string();
+    let channel_obj = match user.id {
+        Some(id) => api.get(&format!("channels/{}", id), user),
+        None => api.get("channel", user),
+    }?;
+    let initial = match var {
+        "status"|"game" => &channel_obj[var],
+        _ => return Err(MyError::from("Variable not found")),
+    };
+    let initial = if channel_obj[var].is_null() {
+        "".to_owned()
+    } else {
+        channel_obj[var].to_string()
+    };
+    let line = match editor.readline_with_initial(prompt, &initial) {
+        Ok(l) => l,
+        Err(e) => {
+            return Err(MyError::from("Variable was not changed"));
+        },
+    };
+    match var {
+        "status" => set_status(api, user, &line),
+        "game" => set_game(api, user, &line),
+        _ => Err(MyError::from("Variable not found")),
+    }
+}
+
 
 fn follow<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>)
                          -> Result<(), MyError> {
@@ -551,6 +595,7 @@ fn print_help() {
     println!("Commands:");
     p("?", "Prints help text");
     p("api [path]", "Explore the api");
+    p("edit <var>", "Lets you edit the value of a variable");
     p("exit", "Exits the shell");
     p("f", "Alias for following");
     p("follow <channel...>", "Follows the channel(s)");

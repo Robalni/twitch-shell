@@ -48,6 +48,7 @@ Robalni playing Creative
 | --------------------- | ------------
 | ?                     | Prints help text
 | api [path]            | Explore the api
+| edit <var>            | Lets you edit the value of a variable
 | exit                  | Exits the shell
 | f                     | Alias for following
 | follow <channel...>   | Follows the channel(s)
