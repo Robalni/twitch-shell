@@ -280,13 +280,14 @@ fn edit_var<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>,
         None => api.get("channel", user),
     }?;
     let initial = match var {
-        "status"|"game" => &channel_obj[var],
+        "status"|"game" => {
+            if channel_obj[var].is_null() {
+                "".to_owned()
+            } else {
+                channel_obj[var].to_string()
+            }
+        },
         _ => return Err(MyError::from("Variable not found")),
-    };
-    let initial = if channel_obj[var].is_null() {
-        "".to_owned()
-    } else {
-        channel_obj[var].to_string()
     };
     let line = match editor.readline_with_initial(prompt, &initial) {
         Ok(l) => l,
