@@ -291,7 +291,7 @@ fn edit_var<S: Borrow<str>>(api: &mut Api, user: &User, cmd: &Vec<S>,
     };
     let line = match editor.readline_with_initial(prompt, &initial) {
         Ok(l) => l,
-        Err(e) => {
+        Err(_) => {
             return Err(MyError::from("Variable was not changed"));
         },
     };
